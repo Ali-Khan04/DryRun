@@ -1,0 +1,128 @@
+.toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  flex-shrink: 0;
+  width: 200px;
+  height: 100vh;
+  padding: 20px 16px;
+  background: #0d1420;
+  border-right: 1px solid #1e3a5f;
+  font-family: "JetBrains Mono", monospace;
+  overflow-y: auto;
+}
+
+.brand {
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  color: #00d4ff;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sectionLabel {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #475569;
+}
+
+.modeGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: #0a0e14;
+  border: 1px solid #1e3a5f;
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.modeBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-family: inherit;
+  font-size: 12px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
+}
+
+.modeBtn:hover {
+  color: #e2e8f0;
+  background: #131b29;
+}
+
+.modeBtnActive,
+.modeBtnActive:hover {
+  color: #0a0e14;
+  background: #00d4ff;
+}
+
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.swatchWall {
+  background: #334155;
+  border: 1px solid #475569;
+}
+
+.swatchErase {
+  background: transparent;
+  border: 1px solid #475569;
+}
+
+.swatchStart {
+  background: #ff6b35;
+  border-radius: 50%;
+}
+
+.swatchGoal {
+  background: transparent;
+  border: 1.5px solid #00d4ff;
+  border-radius: 50%;
+}
+
+.clearBtn {
+  border: 1px solid #3a1e2a;
+  background: transparent;
+  color: #f87171;
+  font-family: inherit;
+  font-size: 12px;
+  padding: 9px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.clearBtn:hover {
+  background: #2a1015;
+  border-color: #f87171;
+}
+
+.status {
+  margin-top: auto;
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.4;
+  border-top: 1px solid #1e3a5f;
+  padding-top: 12px;
+}
