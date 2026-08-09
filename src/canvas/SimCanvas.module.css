@@ -13,4 +13,5 @@
   cursor: crosshair;
   image-rendering: pixelated;
   border: 1px solid #1e3a5f;
+  touch-action: none;
 }

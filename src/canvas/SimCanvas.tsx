@@ -45,14 +45,14 @@ export function SimCanvas() {
     if (!ctx) return;
     renderGrid(ctx, state);
   }, [state]);
-
-  const getCellFromEvent = useCallback(
-    (e: React.MouseEvent<HTMLCanvasElement>) => {
+  // Get the cell at a given clientX/clientY coordinate, or null if out of bounds
+  const getCellFromPoint = useCallback(
+    (clientX: number, clientY: number) => {
       const canvas = canvasRef.current;
       if (!canvas) return null;
       const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
       const col = Math.floor(x / config.cellSize);
       const row = Math.floor(y / config.cellSize);
       if (row < 0 || row >= config.rows || col < 0 || col >= config.cols)
@@ -62,14 +62,42 @@ export function SimCanvas() {
     [config],
   );
 
-  const paint = useCallback(
-    (e: React.MouseEvent<HTMLCanvasElement>) => {
-      const pos = getCellFromEvent(e);
+  const paintAt = useCallback(
+    (clientX: number, clientY: number) => {
+      const pos = getCellFromPoint(clientX, clientY);
       if (!pos) return;
       dispatch({ type: "SET_CELL", row: pos.row, col: pos.col });
     },
-    [getCellFromEvent, dispatch],
+    [getCellFromPoint, dispatch],
   );
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    isDrawing.current = true;
+    paintAt(e.clientX, e.clientY);
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (isDrawing.current) paintAt(e.clientX, e.clientY);
+  };
+
+  const stopDrawing = () => {
+    isDrawing.current = false;
+  };
+
+  // preventDefault stops the page from scrolling/zooming while drawing
+  const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    isDrawing.current = true;
+    const touch = e.touches[0];
+    if (touch) paintAt(touch.clientX, touch.clientY);
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    if (!isDrawing.current) return;
+    const touch = e.touches[0];
+    if (touch) paintAt(touch.clientX, touch.clientY);
+  };
 
   return (
     <div className={styles.wrapper} ref={wrapperRef}>
@@ -78,19 +106,14 @@ export function SimCanvas() {
         width={config.cols * config.cellSize}
         height={config.rows * config.cellSize}
         className={styles.canvas}
-        onMouseDown={(e) => {
-          isDrawing.current = true;
-          paint(e);
-        }}
-        onMouseMove={(e) => {
-          if (isDrawing.current) paint(e);
-        }}
-        onMouseUp={() => {
-          isDrawing.current = false;
-        }}
-        onMouseLeave={() => {
-          isDrawing.current = false;
-        }}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={stopDrawing}
+        onMouseLeave={stopDrawing}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={stopDrawing}
+        onTouchCancel={stopDrawing}
       />
     </div>
   );
