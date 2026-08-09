@@ -3,11 +3,40 @@ import { useSim } from "../context/SimulationContext";
 import { renderGrid } from "./renderer";
 import styles from "./SimCanvas.module.css";
 
+const WRAPPER_PADDING = 16;
+const MIN_COLS = 20;
+const MIN_ROWS = 12;
+
 export function SimCanvas() {
   const { state, dispatch } = useSim();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const isDrawing = useRef(false);
   const { config } = state;
+  // Resize the grid when the wrapper size changes
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+
+    const resize = (width: number, height: number) => {
+      const availW = width - WRAPPER_PADDING * 2;
+      const availH = height - WRAPPER_PADDING * 2;
+      const cols = Math.max(MIN_COLS, Math.floor(availW / config.cellSize));
+      const rows = Math.max(MIN_ROWS, Math.floor(availH / config.cellSize));
+      dispatch({ type: "RESIZE_GRID", rows, cols });
+    };
+
+    resize(wrapper.clientWidth, wrapper.clientHeight);
+
+    const observer = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      resize(width, height);
+    });
+    observer.observe(wrapper);
+
+    return () => observer.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [config.cellSize, dispatch]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -43,7 +72,7 @@ export function SimCanvas() {
   );
 
   return (
-    <div className={styles.wrapper}>
+    <div className={styles.wrapper} ref={wrapperRef}>
       <canvas
         ref={canvasRef}
         width={config.cols * config.cellSize}

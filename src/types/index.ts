@@ -44,4 +44,5 @@ export type SimAction =
   | { type: "SET_RUNNING"; val: boolean }
   | { type: "MARK_PATH"; cells: GridPos[] }
   | { type: "MARK_EXPLORED"; cells: GridPos[] }
-  | { type: "LOAD_GRID"; grid: Cell[][] };
+  | { type: "LOAD_GRID"; grid: Cell[][] }
+  | { type: "RESIZE_GRID"; rows: number; cols: number };

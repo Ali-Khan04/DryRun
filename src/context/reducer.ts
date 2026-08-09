@@ -52,6 +52,9 @@ export function simReducer(state: SimState, action: SimAction): SimState {
           ...state,
           grid,
           robot: { pos: { row, col }, angleDeg: 0 },
+          statusMsg: state.goal
+            ? "Start and goal set."
+            : "Start placed. Now place a goal.",
         };
       } else if (mode === "goal") {
         // Replace the previous goal if one already exists
@@ -65,6 +68,9 @@ export function simReducer(state: SimState, action: SimAction): SimState {
           ...state,
           grid,
           goal: { row, col },
+          statusMsg: state.robot
+            ? "Start and goal set."
+            : "Goal placed. Now place a start.",
         };
       }
 
@@ -74,12 +80,16 @@ export function simReducer(state: SimState, action: SimAction): SimState {
     case "SET_DRAW_MODE":
       return { ...state, drawMode: action.mode };
 
-    case "CLEAR_GRID":
+    case "CLEAR_GRID": {
+      const { rows, cols } = state.config;
       return {
-        ...makeInitialState(),
-        drawMode: state.drawMode,
+        ...state,
+        grid: makeGrid(rows, cols),
+        robot: null,
+        goal: null,
         statusMsg: "Grid cleared.",
       };
+    }
 
     case "SET_STATUS":
       return { ...state, statusMsg: action.msg };
@@ -113,6 +123,39 @@ export function simReducer(state: SimState, action: SimAction): SimState {
 
     case "LOAD_GRID":
       return { ...state, grid: action.grid };
+
+    case "RESIZE_GRID": {
+      const { rows, cols } = action;
+      if (rows === state.config.rows && cols === state.config.cols) {
+        return state;
+      }
+
+      // Rebuild at the new size, copying over whatever overlaps the old grid
+      // so walls/start/goal survive a resize instead of getting wiped.
+      const grid = makeGrid(rows, cols);
+      const oldGrid = state.grid;
+      const copyRows = Math.min(rows, oldGrid.length);
+      const copyCols = Math.min(cols, oldGrid[0]?.length ?? 0);
+
+      for (let r = 0; r < copyRows; r++) {
+        for (let c = 0; c < copyCols; c++) {
+          grid[r][c] = { ...oldGrid[r][c] };
+        }
+      }
+
+      const robotInBounds =
+        state.robot && state.robot.pos.row < rows && state.robot.pos.col < cols;
+      const goalInBounds =
+        state.goal && state.goal.row < rows && state.goal.col < cols;
+
+      return {
+        ...state,
+        grid,
+        config: { ...state.config, rows, cols },
+        robot: robotInBounds ? state.robot : null,
+        goal: goalInBounds ? state.goal : null,
+      };
+    }
 
     default:
       return state;
