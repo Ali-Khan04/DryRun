@@ -17,6 +17,7 @@ export interface RobotState {
 }
 
 export type DrawMode = "wall" | "erase" | "start" | "goal";
+export type Algorithm = "astar" | "dijkstra";
 
 export interface SimConfig {
   cols: number;
@@ -29,6 +30,7 @@ export interface SimState {
   robot: RobotState | null;
   goal: GridPos | null;
   drawMode: DrawMode;
+  algorithm: Algorithm;
   config: SimConfig;
   isRunning: boolean;
   statusMsg: string;
@@ -37,9 +39,11 @@ export interface SimState {
 export type SimAction =
   | { type: "SET_CELL"; row: number; col: number }
   | { type: "SET_DRAW_MODE"; mode: DrawMode }
+  | { type: "SET_ALGORITHM"; algorithm: Algorithm }
   | { type: "SET_ROBOT"; pos: GridPos }
   | { type: "SET_GOAL"; pos: GridPos }
   | { type: "CLEAR_GRID" }
+  | { type: "RESET_SEARCH" }
   | { type: "SET_STATUS"; msg: string }
   | { type: "SET_RUNNING"; val: boolean }
   | { type: "MARK_PATH"; cells: GridPos[] }

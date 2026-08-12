@@ -20,6 +20,7 @@ export function makeInitialState(): SimState {
     robot: null,
     goal: null,
     drawMode: "wall",
+    algorithm: "astar",
     config: { rows, cols, cellSize: 20 },
     isRunning: false,
     statusMsg: "Draw walls, then place start and goal.",
@@ -29,6 +30,8 @@ export function makeInitialState(): SimState {
 export function simReducer(state: SimState, action: SimAction): SimState {
   switch (action.type) {
     case "SET_CELL": {
+      if (state.isRunning) return state; // don't let edits race the search
+
       const { row, col } = action;
       const grid = state.grid.map((r) => r.map((c) => ({ ...c })));
       const mode = state.drawMode;
@@ -36,12 +39,10 @@ export function simReducer(state: SimState, action: SimAction): SimState {
       if (mode === "wall") {
         grid[row][col].type = "wall";
       } else if (mode === "erase") {
-        // Reset the cell back to its default state
         grid[row][col].type = "empty";
         grid[row][col].inPath = false;
         grid[row][col].explored = false;
       } else if (mode === "start") {
-        // Only allow one start position on the grid
         for (let r = 0; r < grid.length; r++)
           for (let c = 0; c < grid[0].length; c++)
             if (grid[r][c].type === "start") grid[r][c].type = "empty";
@@ -57,7 +58,6 @@ export function simReducer(state: SimState, action: SimAction): SimState {
             : "Start placed. Now place a goal.",
         };
       } else if (mode === "goal") {
-        // Replace the previous goal if one already exists
         for (let r = 0; r < grid.length; r++)
           for (let c = 0; c < grid[0].length; c++)
             if (grid[r][c].type === "goal") grid[r][c].type = "empty";
@@ -80,6 +80,9 @@ export function simReducer(state: SimState, action: SimAction): SimState {
     case "SET_DRAW_MODE":
       return { ...state, drawMode: action.mode };
 
+    case "SET_ALGORITHM":
+      return { ...state, algorithm: action.algorithm };
+
     case "CLEAR_GRID": {
       const { rows, cols } = state.config;
       return {
@@ -91,6 +94,18 @@ export function simReducer(state: SimState, action: SimAction): SimState {
       };
     }
 
+    case "RESET_SEARCH": {
+      // Clears explored/path highlighting only - walls, start, and goal stay put
+      const grid = state.grid.map((r) =>
+        r.map((c) => ({ ...c, explored: false, inPath: false })),
+      );
+      return {
+        ...state,
+        grid,
+        statusMsg: "Search reset. Ready to run again.",
+      };
+    }
+
     case "SET_STATUS":
       return { ...state, statusMsg: action.msg };
 
@@ -99,25 +114,19 @@ export function simReducer(state: SimState, action: SimAction): SimState {
 
     case "MARK_PATH": {
       const grid = state.grid.map((r) => r.map((c) => ({ ...c })));
-
-      // Highlight the final path without changing walls or markers
       action.cells.forEach(({ row, col }: GridPos) => {
         if (grid[row][col].type === "empty") {
           grid[row][col].inPath = true;
         }
       });
-
       return { ...state, grid };
     }
 
     case "MARK_EXPLORED": {
       const grid = state.grid.map((r) => r.map((c) => ({ ...c })));
-
-      // Mark every node visited by the search
       action.cells.forEach(({ row, col }: GridPos) => {
         grid[row][col].explored = true;
       });
-
       return { ...state, grid };
     }
 
@@ -130,8 +139,6 @@ export function simReducer(state: SimState, action: SimAction): SimState {
         return state;
       }
 
-      // Rebuild at the new size, copying over whatever overlaps the old grid
-      // so walls/start/goal survive a resize instead of getting wiped.
       const grid = makeGrid(rows, cols);
       const oldGrid = state.grid;
       const copyRows = Math.min(rows, oldGrid.length);

@@ -13,7 +13,7 @@ export function SimCanvas() {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const isDrawing = useRef(false);
   const { config } = state;
-  // Resize the grid when the wrapper size changes
+
   useEffect(() => {
     const wrapper = wrapperRef.current;
     if (!wrapper) return;
@@ -45,7 +45,7 @@ export function SimCanvas() {
     if (!ctx) return;
     renderGrid(ctx, state);
   }, [state]);
-  // Get the cell at a given clientX/clientY coordinate, or null if out of bounds
+
   const getCellFromPoint = useCallback(
     (clientX: number, clientY: number) => {
       const canvas = canvasRef.current;
@@ -64,11 +64,12 @@ export function SimCanvas() {
 
   const paintAt = useCallback(
     (clientX: number, clientY: number) => {
+      if (state.isRunning) return; // freeze the grid while a search animates
       const pos = getCellFromPoint(clientX, clientY);
       if (!pos) return;
       dispatch({ type: "SET_CELL", row: pos.row, col: pos.col });
     },
-    [getCellFromPoint, dispatch],
+    [getCellFromPoint, dispatch, state.isRunning],
   );
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -84,7 +85,6 @@ export function SimCanvas() {
     isDrawing.current = false;
   };
 
-  // preventDefault stops the page from scrolling/zooming while drawing
   const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
     e.preventDefault();
     isDrawing.current = true;
