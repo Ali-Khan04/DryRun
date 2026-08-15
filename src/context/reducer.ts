@@ -163,6 +163,31 @@ export function simReducer(state: SimState, action: SimAction): SimState {
         goal: goalInBounds ? state.goal : null,
       };
     }
+    case "RESTORE_SNAPSHOT": {
+      return {
+        ...state,
+        grid: action.snapshot.grid,
+        robot: action.snapshot.robot,
+        goal: action.snapshot.goal,
+      };
+    }
+
+    case "CLEAR_ENDPOINTS": {
+      const grid = state.grid.map((r) =>
+        r.map((c) =>
+          c.type === "start" || c.type === "goal"
+            ? { ...c, type: "empty" as const }
+            : c,
+        ),
+      );
+      return {
+        ...state,
+        grid,
+        robot: null,
+        goal: null,
+        statusMsg: "Start and goal cleared.",
+      };
+    }
 
     default:
       return state;

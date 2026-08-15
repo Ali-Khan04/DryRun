@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { useSim } from "../context/SimulationContext";
+import { useHistory } from "../history/HistoryContext";
 import {
   useSearchRunner,
   type SearchSpeed,
@@ -20,14 +22,43 @@ const ALGORITHMS: { value: Algorithm; label: string }[] = [
 
 export function Toolbar() {
   const { state, dispatch } = useSim();
+  const history = useHistory();
   const runner = useSearchRunner();
+  const isGridEmpty =
+    !state.robot &&
+    !state.goal &&
+    state.grid.every((row) =>
+      row.every(
+        (cell) => cell.type === "empty" && !cell.explored && !cell.inPath,
+      ),
+    );
+
+  // Ctrl/Cmd+Z undo - global, so it works whether focus is on the canvas or not
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+        if (state.isRunning) return;
+        e.preventDefault();
+        history.undo();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [history, state.isRunning]);
 
   const handleAlgorithmChange = (algorithm: Algorithm) => {
     runner.reset();
     dispatch({ type: "SET_ALGORITHM", algorithm });
   };
 
-  const handleClear = () => {
+  const handleClearEndpoints = () => {
+    history.checkpoint();
+    runner.reset();
+    dispatch({ type: "CLEAR_ENDPOINTS" });
+  };
+
+  const handleClearGrid = () => {
+    history.checkpoint();
     runner.reset();
     dispatch({ type: "CLEAR_GRID" });
   };
@@ -54,6 +85,34 @@ export function Toolbar() {
               {label}
             </button>
           ))}
+        </div>
+
+        <div className={styles.editActions}>
+          <button
+            type="button"
+            className={styles.editBtn}
+            disabled={state.isRunning || !history.canUndo}
+            onClick={history.undo}
+            title="Undo (Ctrl+Z)"
+          >
+            Undo
+          </button>
+          <button
+            type="button"
+            className={styles.editBtn}
+            disabled={state.isRunning || (!state.robot && !state.goal)}
+            onClick={handleClearEndpoints}
+          >
+            Clear Points
+          </button>
+          <button
+            type="button"
+            className={`${styles.editBtn} ${styles.editBtnDanger}`}
+            disabled={state.isRunning || isGridEmpty}
+            onClick={handleClearGrid}
+          >
+            Clear Grid
+          </button>
         </div>
       </div>
 
@@ -130,15 +189,6 @@ export function Toolbar() {
           <option value="fast">Fast</option>
         </select>
       </div>
-
-      <button
-        type="button"
-        className={styles.clearBtn}
-        disabled={state.isRunning}
-        onClick={handleClear}
-      >
-        Clear Grid
-      </button>
 
       <div className={styles.status}>{state.statusMsg}</div>
     </div>

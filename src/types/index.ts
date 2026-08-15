@@ -35,6 +35,11 @@ export interface SimState {
   isRunning: boolean;
   statusMsg: string;
 }
+export interface GridSnapshot {
+  grid: Cell[][];
+  robot: RobotState | null;
+  goal: GridPos | null;
+}
 
 export type SimAction =
   | { type: "SET_CELL"; row: number; col: number }
@@ -49,4 +54,6 @@ export type SimAction =
   | { type: "MARK_PATH"; cells: GridPos[] }
   | { type: "MARK_EXPLORED"; cells: GridPos[] }
   | { type: "LOAD_GRID"; grid: Cell[][] }
-  | { type: "RESIZE_GRID"; rows: number; cols: number };
+  | { type: "RESIZE_GRID"; rows: number; cols: number }
+  | { type: "RESTORE_SNAPSHOT"; snapshot: GridSnapshot }
+  | { type: "CLEAR_ENDPOINTS" };

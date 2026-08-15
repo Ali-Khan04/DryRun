@@ -1,5 +1,6 @@
 import { useRef, useEffect, useCallback } from "react";
 import { useSim } from "../context/SimulationContext";
+import { useHistory } from "../history/HistoryContext";
 import { renderGrid } from "./renderer";
 import styles from "./SimCanvas.module.css";
 
@@ -13,6 +14,7 @@ export function SimCanvas() {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const isDrawing = useRef(false);
   const { config } = state;
+  const history = useHistory();
 
   useEffect(() => {
     const wrapper = wrapperRef.current;
@@ -73,6 +75,8 @@ export function SimCanvas() {
   );
 
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (state.isRunning) return;
+    history.checkpoint();
     isDrawing.current = true;
     paintAt(e.clientX, e.clientY);
   };
@@ -87,6 +91,8 @@ export function SimCanvas() {
 
   const handleTouchStart = (e: React.TouchEvent<HTMLCanvasElement>) => {
     e.preventDefault();
+    if (state.isRunning) return;
+    history.checkpoint();
     isDrawing.current = true;
     const touch = e.touches[0];
     if (touch) paintAt(touch.clientX, touch.clientY);

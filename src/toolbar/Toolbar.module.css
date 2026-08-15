@@ -99,25 +99,6 @@
   border-radius: 50%;
 }
 
-.clearBtn {
-  border: 1px solid #3a1e2a;
-  background: transparent;
-  color: #f87171;
-  font-family: inherit;
-  font-size: 12px;
-  padding: 9px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition:
-    background 0.12s ease,
-    border-color 0.12s ease;
-}
-
-.clearBtn:hover {
-  background: #2a1015;
-  border-color: #f87171;
-}
-
 .status {
   margin-top: auto;
   font-size: 11px;
@@ -186,4 +167,43 @@
   font-size: 11px;
   padding: 6px 8px;
   border-radius: 6px;
+}
+.editActions {
+  display: flex;
+  gap: 4px;
+}
+
+.editBtn {
+  flex: 1;
+  border: 1px solid #1e3a5f;
+  background: #0a0e14;
+  color: #94a3b8;
+  font-family: inherit;
+  font-size: 10px;
+  padding: 7px 4px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.editBtn:hover:not(:disabled) {
+  color: #e2e8f0;
+  border-color: #00d4ff;
+}
+
+.editBtn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.editBtnDanger {
+  color: #f87171;
+}
+
+.editBtnDanger:hover:not(:disabled) {
+  border-color: #f87171;
+  background: #2a1015;
 }
