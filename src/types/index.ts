@@ -34,6 +34,7 @@ export interface SimState {
   config: SimConfig;
   isRunning: boolean;
   statusMsg: string;
+  path: GridPos[] | null;
 }
 export interface GridSnapshot {
   grid: Cell[][];
@@ -56,4 +57,6 @@ export type SimAction =
   | { type: "LOAD_GRID"; grid: Cell[][] }
   | { type: "RESIZE_GRID"; rows: number; cols: number }
   | { type: "RESTORE_SNAPSHOT"; snapshot: GridSnapshot }
-  | { type: "CLEAR_ENDPOINTS" };
+  | { type: "CLEAR_ENDPOINTS" }
+  | { type: "SET_PATH"; path: GridPos[] | null }
+  | { type: "MOVE_ROBOT"; pos: GridPos; angleDeg: number };

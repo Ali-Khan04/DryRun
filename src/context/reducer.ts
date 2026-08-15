@@ -19,6 +19,7 @@ export function makeInitialState(): SimState {
     grid: makeGrid(rows, cols),
     robot: null,
     goal: null,
+    path: null,
     drawMode: "wall",
     algorithm: "astar",
     config: { rows, cols, cellSize: 20 },
@@ -90,10 +91,10 @@ export function simReducer(state: SimState, action: SimAction): SimState {
         grid: makeGrid(rows, cols),
         robot: null,
         goal: null,
+        path: null,
         statusMsg: "Grid cleared.",
       };
     }
-
     case "RESET_SEARCH": {
       // Clears explored/path highlighting only - walls, start, and goal stay put
       const grid = state.grid.map((r) =>
@@ -102,6 +103,7 @@ export function simReducer(state: SimState, action: SimAction): SimState {
       return {
         ...state,
         grid,
+        path: null,
         statusMsg: "Search reset. Ready to run again.",
       };
     }
@@ -185,9 +187,18 @@ export function simReducer(state: SimState, action: SimAction): SimState {
         grid,
         robot: null,
         goal: null,
+        path: null,
         statusMsg: "Start and goal cleared.",
       };
     }
+    case "SET_PATH":
+      return { ...state, path: action.path };
+
+    case "MOVE_ROBOT":
+      return {
+        ...state,
+        robot: { pos: action.pos, angleDeg: action.angleDeg },
+      };
 
     default:
       return state;

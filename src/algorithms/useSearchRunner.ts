@@ -48,6 +48,7 @@ export function useSearchRunner() {
       dispatch({ type: "MARK_EXPLORED", cells: [value.pos] });
     } else if (value.kind === "done") {
       dispatch({ type: "MARK_PATH", cells: value.path });
+      dispatch({ type: "SET_PATH", path: value.path });
       dispatch({
         type: "SET_STATUS",
         msg: `Path found - ${value.path.length} cells.`,

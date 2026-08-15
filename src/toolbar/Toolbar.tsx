@@ -7,6 +7,7 @@ import {
 } from "../algorithms/useSearchRunner";
 import type { DrawMode, Algorithm } from "../types";
 import styles from "./Toolbar.module.css";
+import { usePathWalker } from "../algorithms/usePathWalker";
 
 const MODES: { mode: DrawMode; label: string; swatchClass: string }[] = [
   { mode: "wall", label: "Wall", swatchClass: styles.swatchWall },
@@ -24,6 +25,7 @@ export function Toolbar() {
   const { state, dispatch } = useSim();
   const history = useHistory();
   const runner = useSearchRunner();
+  const walker = usePathWalker();
   const isGridEmpty =
     !state.robot &&
     !state.goal &&
@@ -189,7 +191,57 @@ export function Toolbar() {
           <option value="fast">Fast</option>
         </select>
       </div>
+      {/* Robot controls */}
+      <div className={styles.section}>
+        <span className={styles.sectionLabel}>Robot</span>
+        <div className={styles.runControls}>
+          {walker.isWalking ? (
+            <button
+              type="button"
+              className={styles.controlBtn}
+              onClick={walker.pause}
+            >
+              Pause
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={`${styles.controlBtn} ${styles.controlBtnPrimary}`}
+              disabled={!walker.canWalk}
+              onClick={walker.play}
+            >
+              Walk
+            </button>
+          )}
+          <button
+            type="button"
+            className={styles.controlBtn}
+            disabled={!walker.canWalk || walker.isWalking}
+            onClick={walker.step}
+          >
+            Step
+          </button>
+          <button
+            type="button"
+            className={styles.controlBtn}
+            disabled={!walker.canWalk}
+            onClick={walker.reset}
+          >
+            Reset
+          </button>
+        </div>
 
+        <select
+          className={styles.speedSelect}
+          value={walker.speed}
+          disabled={walker.isWalking}
+          onChange={(e) => walker.setSpeed(e.target.value as any)}
+        >
+          <option value="slow">Slow</option>
+          <option value="normal">Normal</option>
+          <option value="fast">Fast</option>
+        </select>
+      </div>
       <div className={styles.status}>{state.statusMsg}</div>
     </div>
   );
