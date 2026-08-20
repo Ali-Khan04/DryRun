@@ -69,6 +69,9 @@ export function renderGrid(ctx: CanvasRenderingContext2D, state: SimState) {
       if (cell.type === "goal") {
         drawGoal(ctx, x, y, cellSize);
       }
+      if (cell.type === "start") {
+        drawStart(ctx, x, y, cellSize);
+      }
     }
   }
 
@@ -79,6 +82,37 @@ export function renderGrid(ctx: CanvasRenderingContext2D, state: SimState) {
     drawRobot(ctx, rx, ry, cellSize * 0.38, robot.angleDeg);
   }
 }
+function drawStart(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+) {
+  const cx = x + size / 2;
+  const cy = y + size / 2;
+  const s = size * 0.42;
+
+  ctx.fillStyle = "#FF6B3525";
+  ctx.beginPath();
+  ctx.arc(cx, cy, size * 0.44, 0, Math.PI * 2);
+  ctx.fill();
+
+  // flag-shaped marker so it reads as "origin point," not "the robot"
+  ctx.fillStyle = C.start;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - s);
+  ctx.lineTo(cx + s * 0.9, cy - s * 0.15);
+  ctx.lineTo(cx, cy + s * 0.35);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = C.start;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - s);
+  ctx.lineTo(cx, cy + s * 0.9);
+  ctx.stroke();
+}
 
 function drawRobot(
   ctx: CanvasRenderingContext2D,
@@ -87,33 +121,65 @@ function drawRobot(
   r: number,
   angleDeg: number,
 ) {
-  // glow
-  const glow = ctx.createRadialGradient(x, y, 0, x, y, r * 2.5);
-  glow.addColorStop(0, "#FF6B3520");
+  const rad = (angleDeg * Math.PI) / 180;
+
+  ctx.save();
+  ctx.translate(x, y);
+
+  // glow, drawn before rotation so it stays a clean circle
+  const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 2.6);
+  glow.addColorStop(0, "#00D4FF22");
   glow.addColorStop(1, "transparent");
   ctx.fillStyle = glow;
   ctx.beginPath();
-  ctx.arc(x, y, r * 2.5, 0, Math.PI * 2);
+  ctx.arc(0, 0, r * 2.6, 0, Math.PI * 2);
   ctx.fill();
 
-  // body
+  ctx.rotate(rad); // 0deg = facing +col (right), matches usePathWalker's angleBetween
+
+  const w = r * 2.1;
+  const h = r * 1.5;
+  const radius = h * 0.35;
+
+  // chassis
   ctx.fillStyle = C.robot;
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, Math.PI * 2);
+  roundRect(ctx, -w / 2, -h / 2, w, h, radius);
   ctx.fill();
-
   ctx.strokeStyle = C.robotBorder;
   ctx.lineWidth = 1.5;
   ctx.stroke();
 
-  // direction indicator
-  const rad = (angleDeg * Math.PI) / 180;
-  ctx.strokeStyle = "#fff";
-  ctx.lineWidth = 2;
+  // wheels
+  ctx.fillStyle = "#0A0E14";
+  ctx.fillRect(-w * 0.32, -h / 2 - 2, w * 0.22, 3);
+  ctx.fillRect(w * 0.1, -h / 2 - 2, w * 0.22, 3);
+  ctx.fillRect(-w * 0.32, h / 2 - 1, w * 0.22, 3);
+  ctx.fillRect(w * 0.1, h / 2 - 1, w * 0.22, 3);
+
+  // headlight marks the front - the direction the robot is actually facing
+  ctx.fillStyle = "#FFFFFF";
   ctx.beginPath();
-  ctx.moveTo(x, y);
-  ctx.lineTo(x + Math.cos(rad) * r * 0.8, y + Math.sin(rad) * r * 0.8);
-  ctx.stroke();
+  ctx.arc(w / 2 - h * 0.2, 0, h * 0.16, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function roundRect(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  r: number,
+) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
 }
 
 function drawGoal(
