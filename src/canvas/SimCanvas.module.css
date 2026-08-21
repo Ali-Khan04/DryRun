@@ -1,17 +1,29 @@
 .wrapper {
   overflow: auto;
   flex: 1;
-  background: #0a0e14;
+  background: radial-gradient(
+    ellipse 80% 60% at 50% 0%,
+    #151b26 0%,
+    var(--ink) 70%
+  );
   display: flex;
   align-items: flex-start;
   justify-content: flex-start;
-  padding: 16px;
+  padding: 24px;
+}
+
+.canvasFrame {
+  display: inline-block;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  box-shadow: 0 20px 60px -20px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+  line-height: 0;
 }
 
 .canvas {
   display: block;
   cursor: crosshair;
   image-rendering: pixelated;
-  border: 1px solid #1e3a5f;
   touch-action: none;
 }

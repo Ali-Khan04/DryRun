@@ -107,20 +107,22 @@ export function SimCanvas() {
 
   return (
     <div className={styles.wrapper} ref={wrapperRef}>
-      <canvas
-        ref={canvasRef}
-        width={config.cols * config.cellSize}
-        height={config.rows * config.cellSize}
-        className={styles.canvas}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={stopDrawing}
-        onMouseLeave={stopDrawing}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={stopDrawing}
-        onTouchCancel={stopDrawing}
-      />
+      <div className={styles.canvasFrame}>
+        <canvas
+          ref={canvasRef}
+          width={config.cols * config.cellSize}
+          height={config.rows * config.cellSize}
+          className={styles.canvas}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={stopDrawing}
+          onMouseLeave={stopDrawing}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={stopDrawing}
+          onTouchCancel={stopDrawing}
+        />
+      </div>
     </div>
   );
 }

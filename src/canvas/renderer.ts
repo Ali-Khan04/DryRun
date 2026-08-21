@@ -1,18 +1,18 @@
 import type { SimState } from "../types";
 
 const C = {
-  bg: "#0A0E14",
-  gridLine: "#1E3A5F",
-  wall: "#334155",
-  wallStroke: "#475569",
-  explored: "#0f2a1a",
-  path: "#00D4FF22",
-  pathStroke: "#00D4FF",
-  start: "#FF6B35",
-  goal: "#00D4FF",
-  robot: "#FF6B35",
-  robotBorder: "#FFB347",
-  text: "#E2E8F0",
+  bg: "#0B0D12",
+  gridLine: "#1A2130",
+  wall: "#2B3342",
+  wallStroke: "#3D4759",
+  explored: "#12241F",
+  path: "#4CE8B822",
+  pathStroke: "#4CE8B8",
+  start: "#FF8F5C",
+  goal: "#4CE8B8",
+  robot: "#FF8F5C",
+  robotBorder: "#FFC49A",
+  text: "#EAEDF2",
 };
 
 export function renderGrid(ctx: CanvasRenderingContext2D, state: SimState) {
@@ -156,7 +156,7 @@ function drawRobot(
   ctx.fillRect(-w * 0.32, h / 2 - 1, w * 0.22, 3);
   ctx.fillRect(w * 0.1, h / 2 - 1, w * 0.22, 3);
 
-  // headlight marks the front - the direction the robot is actually facing
+  // headlight marks the front where the direction the robot is actually facing
   ctx.fillStyle = "#FFFFFF";
   ctx.beginPath();
   ctx.arc(w / 2 - h * 0.2, 0, h * 0.16, 0, Math.PI * 2);
