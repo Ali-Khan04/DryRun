@@ -56,11 +56,13 @@ export function usePathWalker() {
   const play = useCallback(() => {
     if (!state.path || state.path.length === 0) return;
     setIsWalking(true);
+    dispatch({ type: "SET_RUNNING", val: true });
     stopTimer();
     timerRef.current = window.setInterval(() => {
       if (advance()) {
         stopTimer();
         setIsWalking(false);
+        dispatch({ type: "SET_RUNNING", val: false });
         dispatch({ type: "SET_STATUS", msg: "Robot reached the goal." });
       }
     }, SPEED_MS[speed]);
@@ -69,12 +71,14 @@ export function usePathWalker() {
   const pause = useCallback(() => {
     stopTimer();
     setIsWalking(false);
-  }, [stopTimer]);
+    dispatch({ type: "SET_RUNNING", val: false });
+  }, [dispatch, stopTimer]);
 
   // place the robot back to the start of the path (index 0), for replaying
   const reset = useCallback(() => {
     stopTimer();
     setIsWalking(false);
+    dispatch({ type: "SET_RUNNING", val: false });
     indexRef.current = 0;
     const path = state.path;
     if (path && path.length > 0) {
