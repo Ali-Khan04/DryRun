@@ -1,6 +1,6 @@
-import type { SimState, SimAction, Cell, GridPos } from "../types";
+import type { SimState, SimAction, Cell, Knowledge, GridPos } from "../types";
+import { findCell } from "../utils/grid";
 
-// Creates an empty grid with the given dimensions
 function makeGrid(rows: number, cols: number): Cell[][] {
   return Array.from({ length: rows }, () =>
     Array.from({ length: cols }, () => ({
@@ -8,6 +8,12 @@ function makeGrid(rows: number, cols: number): Cell[][] {
       explored: false,
       inPath: false,
     })),
+  );
+}
+
+function makeKnown(rows: number, cols: number): Knowledge[][] {
+  return Array.from({ length: rows }, () =>
+    Array<Knowledge>(cols).fill("unknown"),
   );
 }
 
@@ -22,6 +28,10 @@ export function makeInitialState(): SimState {
     path: null,
     drawMode: "wall",
     algorithm: "astar",
+    planningMode: "global",
+    sensorMode: "lidar",
+    known: makeKnown(rows, cols),
+    lastReading: null,
     config: { rows, cols, cellSize: 20 },
     isRunning: false,
     statusMsg: "Draw walls, then place start and goal.",
@@ -31,7 +41,7 @@ export function makeInitialState(): SimState {
 export function simReducer(state: SimState, action: SimAction): SimState {
   switch (action.type) {
     case "SET_CELL": {
-      if (state.isRunning) return state; // don't let edits race the search
+      if (state.isRunning) return state;
 
       const { row, col } = action;
       const grid = state.grid.map((r) => r.map((c) => ({ ...c })));
@@ -84,6 +94,32 @@ export function simReducer(state: SimState, action: SimAction): SimState {
     case "SET_ALGORITHM":
       return { ...state, algorithm: action.algorithm };
 
+    case "SET_SENSOR_MODE":
+      return { ...state, sensorMode: action.mode };
+
+    case "SET_PLANNING_MODE": {
+      const { rows, cols } = state.config;
+      const grid = state.grid.map((r) =>
+        r.map((c) => ({ ...c, explored: false, inPath: false })),
+      );
+      const startPos = findCell(grid, "start");
+
+      return {
+        ...state,
+        planningMode: action.mode,
+        grid,
+        path: null,
+        known: makeKnown(rows, cols),
+        lastReading: null,
+        isRunning: false,
+        robot: startPos ? { pos: startPos, angleDeg: 0 } : null,
+        statusMsg:
+          action.mode === "reactive"
+            ? "Reactive mode - the robot only knows what it senses."
+            : "Global mode - full map known, plan a path.",
+      };
+    }
+
     case "CLEAR_GRID": {
       const { rows, cols } = state.config;
       return {
@@ -92,9 +128,12 @@ export function simReducer(state: SimState, action: SimAction): SimState {
         robot: null,
         goal: null,
         path: null,
+        known: makeKnown(rows, cols),
+        lastReading: null,
         statusMsg: "Grid cleared.",
       };
     }
+
     case "RESET_SEARCH": {
       // Clears explored/path highlighting only - walls, start, and goal stay put
       const grid = state.grid.map((r) =>
@@ -108,11 +147,55 @@ export function simReducer(state: SimState, action: SimAction): SimState {
       };
     }
 
+    case "RESET_EXPLORE": {
+      const { rows, cols } = state.config;
+      return {
+        ...state,
+        known: makeKnown(rows, cols),
+        lastReading: null,
+        statusMsg: "Exploration reset.",
+      };
+    }
+
+    case "CLEAR_ENDPOINTS": {
+      const grid = state.grid.map((r) =>
+        r.map((c) =>
+          c.type === "start" || c.type === "goal"
+            ? { ...c, type: "empty" as const }
+            : c,
+        ),
+      );
+      return {
+        ...state,
+        grid,
+        robot: null,
+        goal: null,
+        path: null,
+        statusMsg: "Start and goal cleared.",
+      };
+    }
+
     case "SET_STATUS":
       return { ...state, statusMsg: action.msg };
 
     case "SET_RUNNING":
       return { ...state, isRunning: action.val };
+
+    case "SET_PATH":
+      return { ...state, path: action.path };
+
+    case "MOVE_ROBOT":
+      return {
+        ...state,
+        robot: { pos: action.pos, angleDeg: action.angleDeg },
+      };
+
+    case "SENSE_UPDATE": {
+      const known = state.known.map((row) => row.slice());
+      for (const c of action.reading.freeCells) known[c.row][c.col] = "free";
+      for (const c of action.reading.hits) known[c.row][c.col] = "wall";
+      return { ...state, known, lastReading: action.reading };
+    }
 
     case "MARK_PATH": {
       const grid = state.grid.map((r) => r.map((c) => ({ ...c })));
@@ -130,6 +213,15 @@ export function simReducer(state: SimState, action: SimAction): SimState {
         grid[row][col].explored = true;
       });
       return { ...state, grid };
+    }
+
+    case "RESTORE_SNAPSHOT": {
+      return {
+        ...state,
+        grid: action.snapshot.grid,
+        robot: action.snapshot.robot,
+        goal: action.snapshot.goal,
+      };
     }
 
     case "LOAD_GRID":
@@ -163,42 +255,10 @@ export function simReducer(state: SimState, action: SimAction): SimState {
         config: { ...state.config, rows, cols },
         robot: robotInBounds ? state.robot : null,
         goal: goalInBounds ? state.goal : null,
+        known: makeKnown(rows, cols),
+        lastReading: null,
       };
     }
-    case "RESTORE_SNAPSHOT": {
-      return {
-        ...state,
-        grid: action.snapshot.grid,
-        robot: action.snapshot.robot,
-        goal: action.snapshot.goal,
-      };
-    }
-
-    case "CLEAR_ENDPOINTS": {
-      const grid = state.grid.map((r) =>
-        r.map((c) =>
-          c.type === "start" || c.type === "goal"
-            ? { ...c, type: "empty" as const }
-            : c,
-        ),
-      );
-      return {
-        ...state,
-        grid,
-        robot: null,
-        goal: null,
-        path: null,
-        statusMsg: "Start and goal cleared.",
-      };
-    }
-    case "SET_PATH":
-      return { ...state, path: action.path };
-
-    case "MOVE_ROBOT":
-      return {
-        ...state,
-        robot: { pos: action.pos, angleDeg: action.angleDeg },
-      };
 
     default:
       return state;
