@@ -32,6 +32,9 @@ export function makeInitialState(): SimState {
     sensorMode: "lidar",
     known: makeKnown(rows, cols),
     lastReading: null,
+    calloutPos: null,
+    calloutText: null,
+    calloutTone: "info",
     config: { rows, cols, cellSize: 20 },
     isRunning: false,
     statusMsg: "Draw walls, then place start and goal.",
@@ -111,6 +114,9 @@ export function simReducer(state: SimState, action: SimAction): SimState {
         path: null,
         known: makeKnown(rows, cols),
         lastReading: null,
+        calloutPos: null,
+        calloutText: null,
+        calloutTone: "info",
         isRunning: false,
         robot: startPos ? { pos: startPos, angleDeg: 0 } : null,
         statusMsg:
@@ -130,12 +136,14 @@ export function simReducer(state: SimState, action: SimAction): SimState {
         path: null,
         known: makeKnown(rows, cols),
         lastReading: null,
+        calloutPos: null,
+        calloutText: null,
+        calloutTone: "info",
         statusMsg: "Grid cleared.",
       };
     }
 
     case "RESET_SEARCH": {
-      // Clears explored/path highlighting only - walls, start, and goal stay put
       const grid = state.grid.map((r) =>
         r.map((c) => ({ ...c, explored: false, inPath: false })),
       );
@@ -143,6 +151,9 @@ export function simReducer(state: SimState, action: SimAction): SimState {
         ...state,
         grid,
         path: null,
+        calloutPos: null,
+        calloutText: null,
+        calloutTone: "info",
         statusMsg: "Search reset. Ready to run again.",
       };
     }
@@ -153,6 +164,9 @@ export function simReducer(state: SimState, action: SimAction): SimState {
         ...state,
         known: makeKnown(rows, cols),
         lastReading: null,
+        calloutPos: null,
+        calloutText: null,
+        calloutTone: "info",
         statusMsg: "Exploration reset.",
       };
     }
@@ -171,6 +185,9 @@ export function simReducer(state: SimState, action: SimAction): SimState {
         robot: null,
         goal: null,
         path: null,
+        calloutPos: null,
+        calloutText: null,
+        calloutTone: "info",
         statusMsg: "Start and goal cleared.",
       };
     }
@@ -196,6 +213,22 @@ export function simReducer(state: SimState, action: SimAction): SimState {
       for (const c of action.reading.hits) known[c.row][c.col] = "wall";
       return { ...state, known, lastReading: action.reading };
     }
+
+    case "SET_CALLOUT":
+      return {
+        ...state,
+        calloutPos: action.pos,
+        calloutText: action.text,
+        calloutTone: action.tone,
+      };
+
+    case "CLEAR_CALLOUT":
+      return {
+        ...state,
+        calloutPos: null,
+        calloutText: null,
+        calloutTone: "info",
+      };
 
     case "MARK_PATH": {
       const grid = state.grid.map((r) => r.map((c) => ({ ...c })));

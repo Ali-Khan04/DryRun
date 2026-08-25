@@ -21,11 +21,13 @@ export type Algorithm = "astar" | "dijkstra";
 export type PlanningMode = "global" | "reactive";
 export type SensorMode = "lidar" | "ultrasonic";
 export type Knowledge = "unknown" | "free" | "wall";
+export type CalloutTone = "info" | "success" | "warn";
 
 export interface SensorReading {
   origin: GridPos;
   hits: GridPos[];
   freeCells: GridPos[];
+  facingRad: number;
 }
 
 export interface GridSnapshot {
@@ -51,6 +53,9 @@ export interface SimState {
   sensorMode: SensorMode;
   known: Knowledge[][];
   lastReading: SensorReading | null;
+  calloutPos: GridPos | null;
+  calloutText: string | null;
+  calloutTone: CalloutTone;
   config: SimConfig;
   isRunning: boolean;
   statusMsg: string;
@@ -75,6 +80,8 @@ export type SimAction =
   | { type: "SET_PATH"; path: GridPos[] | null }
   | { type: "MOVE_ROBOT"; pos: GridPos; angleDeg: number }
   | { type: "SENSE_UPDATE"; reading: SensorReading }
+  | { type: "SET_CALLOUT"; pos: GridPos; text: string; tone: CalloutTone }
+  | { type: "CLEAR_CALLOUT" }
   | { type: "RESTORE_SNAPSHOT"; snapshot: GridSnapshot }
   | { type: "LOAD_GRID"; grid: Cell[][] }
   | { type: "RESIZE_GRID"; rows: number; cols: number };
