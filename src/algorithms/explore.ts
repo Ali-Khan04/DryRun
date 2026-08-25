@@ -1,4 +1,10 @@
-import type { Cell, GridPos, Knowledge, SensorMode, SensorReading } from "../types";
+import type {
+  Cell,
+  GridPos,
+  Knowledge,
+  SensorMode,
+  SensorReading,
+} from "../types";
 import { lidarSweep, ultrasonicSweep } from "../sensors/raycast";
 
 export type ExploreStep =
@@ -7,15 +13,38 @@ export type ExploreStep =
   | { kind: "reached" }
   | { kind: "stuck" };
 
-const NEIGHBOR_OFFSETS = [
+/*const NEIGHBOR_OFFSETS = [
+  { row: -1, col: 0 },
+  { row: 1, col: 0 },
+  { row: 0, col: -1 },
+  { row: 0, col: 1 },
+];*/
+const BASE_OFFSETS = [
   { row: -1, col: 0 },
   { row: 1, col: 0 },
   { row: 0, col: -1 },
   { row: 0, col: 1 },
 ];
+// East, South, West, North the 4 axis-aligned headings a grid robot can
+// face. Used to make the ultrasonic sensor "look around" before moving
+// this is the fix
+const CARDINAL_HEADINGS = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
 
 function sameCell(a: GridPos, b: GridPos) {
   return a.row === b.row && a.col === b.col;
+}
+
+// Fisher-Yates shuffle - used so BFS doesn't always expand neighbors in the
+// same fixed order. Without this, ties (multiple equally-close frontier
+// cells) always resolve the same direction, which reads as the robot
+// pacing back and forth in a straight line instead of spreading out.
+function shuffledOffsets() {
+  const offsets = [...BASE_OFFSETS];
+  for (let i = offsets.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [offsets[i], offsets[j]] = [offsets[j], offsets[i]];
+  }
+  return offsets;
 }
 
 // Breadth-first search over cells the robot has *already confirmed* are
@@ -50,14 +79,14 @@ function shortestKnownPath(
       return path.reverse();
     }
 
-    for (const offset of NEIGHBOR_OFFSETS) {
+    for (const offset of shuffledOffsets()) {
       const row = current.row + offset.row;
       const col = current.col + offset.col;
       if (row < 0 || row >= rows || col < 0 || col >= cols) continue;
 
       const key = `${row},${col}`;
       if (cameFrom.has(key)) continue;
-      if (known[row][col] !== "free") continue; // can't trust unknown or walled cells
+      if (known[row][col] !== "free") continue;
 
       cameFrom.set(key, current);
       queue.push({ row, col });
@@ -67,15 +96,12 @@ function shortestKnownPath(
   return null;
 }
 
-// A frontier cell is known-free but borders at least one unknown cell, the
-// edge of what's been discovered so far, and the most useful place to look
-// next
 function isFrontier(known: Knowledge[][], pos: GridPos): boolean {
   if (known[pos.row][pos.col] !== "free") return false;
   const rows = known.length;
   const cols = known[0].length;
 
-  for (const offset of NEIGHBOR_OFFSETS) {
+  for (const offset of BASE_OFFSETS) {
     const row = pos.row + offset.row;
     const col = pos.col + offset.col;
     if (row < 0 || row >= rows || col < 0 || col >= cols) continue;
@@ -120,19 +146,35 @@ export function* explore(
   let pos = start;
   let facingRad = 0;
 
-  while (true) {
-    const sweep =
-      sensorMode === "lidar"
-        ? lidarSweep(grid, pos)
-        : ultrasonicSweep(grid, pos, facingRad);
-
-    // The robot's own cell always counts as known-free.
-    const freeCells = [{ ...pos }, ...sweep.freeCells];
-
+  const applySweep = (
+    origin: GridPos,
+    sweep: { hits: GridPos[]; freeCells: GridPos[] },
+  ) => {
+    const freeCells = [{ ...origin }, ...sweep.freeCells];
     for (const c of freeCells) known[c.row][c.col] = "free";
     for (const c of sweep.hits) known[c.row][c.col] = "wall";
+    return freeCells;
+  };
 
-    yield { kind: "sense", reading: { origin: pos, hits: sweep.hits, freeCells } };
+  while (true) {
+    if (sensorMode === "lidar") {
+      const sweep = lidarSweep(grid, pos);
+      const freeCells = applySweep(pos, sweep);
+      yield {
+        kind: "sense",
+        reading: { origin: pos, hits: sweep.hits, freeCells },
+      };
+    } else {
+      for (const heading of CARDINAL_HEADINGS) {
+        const sweep = ultrasonicSweep(grid, pos, heading);
+        const freeCells = applySweep(pos, sweep);
+        facingRad = heading;
+        yield {
+          kind: "sense",
+          reading: { origin: pos, hits: sweep.hits, freeCells },
+        };
+      }
+    }
 
     if (sameCell(pos, goal)) {
       yield { kind: "reached" };
@@ -141,7 +183,11 @@ export function* explore(
 
     let path = shortestKnownPath(known, pos, (p) => sameCell(p, goal));
     if (!path) {
-      path = shortestKnownPath(known, pos, (p) => !sameCell(p, pos) && isFrontier(known, p));
+      path = shortestKnownPath(
+        known,
+        pos,
+        (p) => !sameCell(p, pos) && isFrontier(known, p),
+      );
     }
 
     if (!path || path.length < 2) {
