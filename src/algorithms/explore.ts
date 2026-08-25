@@ -9,16 +9,16 @@ import { lidarSweep, ultrasonicSweep } from "../sensors/raycast";
 
 export type ExploreStep =
   | { kind: "sense"; reading: SensorReading }
-  | { kind: "move"; pos: GridPos; angleDeg: number }
+  | {
+      kind: "move";
+      pos: GridPos;
+      angleDeg: number;
+      reason: "goal" | "frontier";
+      sawObstacle: boolean;
+    }
   | { kind: "reached" }
   | { kind: "stuck" };
 
-/*const NEIGHBOR_OFFSETS = [
-  { row: -1, col: 0 },
-  { row: 1, col: 0 },
-  { row: 0, col: -1 },
-  { row: 0, col: 1 },
-];*/
 const BASE_OFFSETS = [
   { row: -1, col: 0 },
   { row: 1, col: 0 },
@@ -114,6 +114,19 @@ function angleBetween(from: GridPos, to: GridPos): number {
   return Math.atan2(to.row - from.row, to.col - from.col);
 }
 
+function dedupeCells(cells: GridPos[]): GridPos[] {
+  const seen = new Set<string>();
+  const out: GridPos[] = [];
+  for (const c of cells) {
+    const key = `${c.row},${c.col}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      out.push(c);
+    }
+  }
+  return out;
+}
+
 /**
  * Frontier exploration: the robot has NO access to `grid` for planning
  * purposes; only `sense()` calls touch it. Each loop:
@@ -142,9 +155,11 @@ export function* explore(
   const known: Knowledge[][] = Array.from({ length: rows }, () =>
     Array<Knowledge>(cols).fill("unknown"),
   );
+  const visited = new Set<string>();
+  const cellKey = (p: GridPos) => `${p.row},${p.col}`;
 
   let pos = start;
-  let facingRad = 0;
+  let facingRad = 0; // tracks the robot's facing from movement, for rendering only
 
   const applySweep = (
     origin: GridPos,
@@ -162,19 +177,58 @@ export function* explore(
       const freeCells = applySweep(pos, sweep);
       yield {
         kind: "sense",
-        reading: { origin: pos, hits: sweep.hits, freeCells },
+        reading: { origin: pos, hits: sweep.hits, freeCells, facingRad },
       };
     } else {
+      const allHits: GridPos[] = [];
+      const allFree: GridPos[] = [];
       for (const heading of CARDINAL_HEADINGS) {
         const sweep = ultrasonicSweep(grid, pos, heading);
         const freeCells = applySweep(pos, sweep);
-        facingRad = heading;
-        yield {
-          kind: "sense",
-          reading: { origin: pos, hits: sweep.hits, freeCells },
-        };
+        allHits.push(...sweep.hits);
+        allFree.push(...freeCells);
       }
+      yield {
+        kind: "sense",
+        reading: {
+          origin: pos,
+          hits: dedupeCells(allHits),
+          freeCells: dedupeCells(allFree),
+          facingRad,
+        },
+      };
     }
+    let sawObstacle = false;
+    if (sensorMode === "lidar") {
+      const sweep = lidarSweep(grid, pos);
+      const freeCells = applySweep(pos, sweep);
+      sawObstacle = sweep.hits.length > 0;
+      yield {
+        kind: "sense",
+        reading: { origin: pos, hits: sweep.hits, freeCells, facingRad },
+      };
+    } else {
+      const allHits: GridPos[] = [];
+      const allFree: GridPos[] = [];
+      for (const heading of CARDINAL_HEADINGS) {
+        const sweep = ultrasonicSweep(grid, pos, heading);
+        const freeCells = applySweep(pos, sweep);
+        allHits.push(...sweep.hits);
+        allFree.push(...freeCells);
+      }
+      const dedupedHits = dedupeCells(allHits);
+      sawObstacle = dedupedHits.length > 0;
+      yield {
+        kind: "sense",
+        reading: {
+          origin: pos,
+          hits: dedupedHits,
+          freeCells: dedupeCells(allFree),
+          facingRad,
+        },
+      };
+    }
+    visited.add(cellKey(pos));
 
     if (sameCell(pos, goal)) {
       yield { kind: "reached" };
@@ -182,12 +236,16 @@ export function* explore(
     }
 
     let path = shortestKnownPath(known, pos, (p) => sameCell(p, goal));
+    let reason: "goal" | "frontier" = "goal";
+
     if (!path) {
       path = shortestKnownPath(
         known,
         pos,
-        (p) => !sameCell(p, pos) && isFrontier(known, p),
+        (p) =>
+          !sameCell(p, pos) && !visited.has(cellKey(p)) && isFrontier(known, p),
       );
+      reason = "frontier";
     }
 
     if (!path || path.length < 2) {
@@ -199,6 +257,12 @@ export function* explore(
     facingRad = angleBetween(pos, next);
     pos = next;
 
-    yield { kind: "move", pos, angleDeg: (facingRad * 180) / Math.PI };
+    yield {
+      kind: "move",
+      pos,
+      angleDeg: (facingRad * 180) / Math.PI,
+      reason,
+      sawObstacle,
+    };
   }
 }
