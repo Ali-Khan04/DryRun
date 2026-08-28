@@ -46,28 +46,64 @@ export function useExplorer() {
 
     if (value.kind === "sense") {
       dispatch({ type: "SENSE_UPDATE", reading: value.reading });
+      dispatch({
+        type: "SET_CALLOUT",
+        pos: value.reading.origin,
+        text:
+          state.sensorMode === "lidar"
+            ? "LiDAR sweep: full 360deg scan "
+            : "Ultrasonic scan: exploring unknown territory",
+        tone: "info",
+      });
     } else if (value.kind === "move") {
       dispatch({
         type: "MOVE_ROBOT",
         pos: value.pos,
         angleDeg: value.angleDeg,
       });
+      dispatch({
+        type: "SET_CALLOUT",
+        pos: value.pos,
+        text:
+          value.reason === "goal"
+            ? "Goal is within the known map - heading there"
+            : value.sawObstacle
+              ? "Obstacle nearby: rerouting around it"
+              : "Nothing nearby: moving to unexplored area",
+        tone: "info",
+      });
     } else if (value.kind === "reached") {
       dispatch({
         type: "SET_STATUS",
-        msg: "Goal reached - found entirely through sensing, no map given.",
+        msg: "Goal reached! found entirely through sensing, no map given.",
       });
+      if (state.robot) {
+        dispatch({
+          type: "SET_CALLOUT",
+          pos: state.robot.pos,
+          text: "Reached the goal!",
+          tone: "success",
+        });
+      }
       return true;
     } else if (value.kind === "stuck") {
       dispatch({
         type: "SET_STATUS",
-        msg: "No reachable path found - goal may be walled off.",
+        msg: "No reachable path found! goal may be walled off.",
       });
+      if (state.robot) {
+        dispatch({
+          type: "SET_CALLOUT",
+          pos: state.robot.pos,
+          text: "Stuck! no reachable path found",
+          tone: "warn",
+        });
+      }
       return true;
     }
 
     return false;
-  }, [ensureGenerator, dispatch]);
+  }, [ensureGenerator, dispatch, state.sensorMode, state.robot]);
 
   const step = useCallback(() => {
     stopTimer();

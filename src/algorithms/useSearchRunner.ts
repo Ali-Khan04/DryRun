@@ -46,6 +46,15 @@ export function useSearchRunner() {
 
     if (value.kind === "visit") {
       dispatch({ type: "MARK_EXPLORED", cells: [value.pos] });
+      dispatch({
+        type: "SET_CALLOUT",
+        pos: value.pos,
+        text:
+          state.algorithm === "astar"
+            ? "A* evaluating:  cost so far + distance to goal"
+            : "Dijkstra evaluating: cost so far only",
+        tone: "info",
+      });
     } else if (value.kind === "done") {
       dispatch({ type: "MARK_PATH", cells: value.path });
       dispatch({ type: "SET_PATH", path: value.path });
@@ -53,14 +62,28 @@ export function useSearchRunner() {
         type: "SET_STATUS",
         msg: `Path found - ${value.path.length} cells.`,
       });
+      dispatch({
+        type: "SET_CALLOUT",
+        pos: value.path[value.path.length - 1],
+        text: `Path found - ${value.path.length} cells`,
+        tone: "success",
+      });
       return true;
     } else if (value.kind === "no-path") {
       dispatch({ type: "SET_STATUS", msg: "No path exists." });
+      if (state.robot) {
+        dispatch({
+          type: "SET_CALLOUT",
+          pos: state.robot.pos,
+          text: "No path exists between start and goal",
+          tone: "warn",
+        });
+      }
       return true;
     }
 
     return false;
-  }, [ensureGenerator, dispatch]);
+  }, [ensureGenerator, dispatch, state.algorithm, state.robot]);
 
   const step = useCallback(() => {
     stopTimer();
