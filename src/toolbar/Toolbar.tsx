@@ -7,6 +7,7 @@ import {
 } from "../algorithms/useSearchRunner";
 import { usePathWalker, type WalkSpeed } from "../algorithms/usePathWalker";
 import { useExplorer, type ExploreSpeed } from "../algorithms/useExplorer";
+import { useKnownPlanner, type PlanSpeed } from "../algorithms/useKnownPlanner";
 import type { DrawMode, Algorithm, PlanningMode, SensorMode } from "../types";
 import styles from "./Toolbar.module.css";
 
@@ -69,6 +70,7 @@ export function Toolbar() {
   const runner = useSearchRunner();
   const walker = usePathWalker();
   const explorer = useExplorer();
+  const planner = useKnownPlanner();
 
   const isGridEmpty =
     !state.robot &&
@@ -93,6 +95,7 @@ export function Toolbar() {
 
   const handleAlgorithmChange = (algorithm: Algorithm) => {
     runner.reset();
+    planner.reset();
     dispatch({ type: "SET_ALGORITHM", algorithm });
   };
 
@@ -105,6 +108,7 @@ export function Toolbar() {
     runner.reset();
     walker.reset();
     explorer.reset();
+    planner.reset();
     dispatch({ type: "SET_PLANNING_MODE", mode });
   };
 
@@ -112,6 +116,7 @@ export function Toolbar() {
     history.checkpoint();
     runner.reset();
     explorer.reset();
+    planner.reset();
     dispatch({ type: "CLEAR_ENDPOINTS" });
   };
 
@@ -119,6 +124,7 @@ export function Toolbar() {
     history.checkpoint();
     runner.reset();
     explorer.reset();
+    planner.reset();
     dispatch({ type: "CLEAR_GRID" });
   };
 
@@ -133,7 +139,6 @@ export function Toolbar() {
       </header>
 
       <div className={styles.body}>
-        {/* ---- EDIT ---- */}
         <section className={styles.card}>
           <h2 className={styles.cardLabel}>Draw Mode</h2>
           <div className={styles.modeGroup} role="group" aria-label="Draw mode">
@@ -183,7 +188,6 @@ export function Toolbar() {
           </div>
         </section>
 
-        {/* ---- ALGORITHM ---- */}
         <section className={styles.card}>
           <h2 className={styles.cardLabel}>Mode</h2>
           <div
@@ -213,137 +217,80 @@ export function Toolbar() {
           </p>
         </section>
 
-        {state.planningMode === "global" ? (
-          <>
-            <section className={styles.card}>
-              <h2 className={styles.cardLabel}>Algorithm</h2>
-              <div
-                className={styles.modeGroup}
-                role="group"
-                aria-label="Algorithm"
-              >
-                {ALGORITHMS.map(({ value, label }) => (
-                  <button
-                    key={value}
-                    type="button"
-                    disabled={state.isRunning}
-                    className={`${styles.modeBtn} ${
-                      state.algorithm === value ? styles.modeBtnActive : ""
-                    }`}
-                    aria-pressed={state.algorithm === value}
-                    onClick={() => handleAlgorithmChange(value)}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              <p className={styles.hint}>
-                {state.algorithm === "astar"
-                  ? "A* explores toward the goal first, using distance as a guide - usually faster, fewer cells checked."
-                  : "Dijkstra explores evenly in all directions - slower, but guaranteed shortest path even with no sense of direction."}
-              </p>
-            </section>
-
-            <section className={styles.card}>
-              <h2 className={styles.cardLabel}>Search</h2>
-              <div className={styles.runControls}>
-                {state.isRunning ? (
-                  <button
-                    type="button"
-                    className={styles.controlBtn}
-                    onClick={runner.pause}
-                  >
-                    Pause
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className={`${styles.controlBtn} ${styles.controlBtnPrimary}`}
-                    onClick={runner.play}
-                  >
-                    Run
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className={styles.controlBtn}
-                  disabled={state.isRunning}
-                  onClick={runner.step}
-                >
-                  Step
-                </button>
-                <button
-                  type="button"
-                  className={styles.controlBtn}
-                  onClick={runner.reset}
-                >
-                  Reset
-                </button>
-              </div>
-
-              <select
-                className={styles.speedSelect}
-                value={runner.speed}
+        <section className={styles.card}>
+          <h2 className={styles.cardLabel}>Algorithm</h2>
+          <div className={styles.modeGroup} role="group" aria-label="Algorithm">
+            {ALGORITHMS.map(({ value, label }) => (
+              <button
+                key={value}
+                type="button"
                 disabled={state.isRunning}
-                onChange={(e) => runner.setSpeed(e.target.value as SearchSpeed)}
+                className={`${styles.modeBtn} ${
+                  state.algorithm === value ? styles.modeBtnActive : ""
+                }`}
+                aria-pressed={state.algorithm === value}
+                onClick={() => handleAlgorithmChange(value)}
               >
-                <option value="slow">Slow</option>
-                <option value="normal">Normal</option>
-                <option value="fast">Fast</option>
-              </select>
-            </section>
+                {label}
+              </button>
+            ))}
+          </div>
+          <p className={styles.hint}>
+            {state.algorithm === "astar"
+              ? "A* explores toward the goal first, using distance as a guide - usually faster, fewer cells checked."
+              : "Dijkstra explores evenly in all directions - slower, but guaranteed shortest path even with no sense of direction."}
+          </p>
+        </section>
 
-            <section className={styles.card}>
-              <h2 className={styles.cardLabel}>Robot</h2>
-              <div className={styles.runControls}>
-                {walker.isWalking ? (
-                  <button
-                    type="button"
-                    className={styles.controlBtn}
-                    onClick={walker.pause}
-                  >
-                    Pause
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className={`${styles.controlBtn} ${styles.controlBtnPrimary}`}
-                    disabled={!walker.canWalk}
-                    onClick={walker.play}
-                  >
-                    Walk
-                  </button>
-                )}
+        {state.planningMode === "global" ? (
+          <section className={styles.card}>
+            <h2 className={styles.cardLabel}>Search</h2>
+            <div className={styles.runControls}>
+              {state.isRunning ? (
                 <button
                   type="button"
                   className={styles.controlBtn}
-                  disabled={!walker.canWalk || walker.isWalking}
-                  onClick={walker.step}
+                  onClick={runner.pause}
                 >
-                  Step
+                  Pause
                 </button>
+              ) : (
                 <button
                   type="button"
-                  className={styles.controlBtn}
-                  disabled={!walker.canWalk}
-                  onClick={walker.reset}
+                  className={`${styles.controlBtn} ${styles.controlBtnPrimary}`}
+                  onClick={runner.play}
                 >
-                  Reset
+                  Run
                 </button>
-              </div>
-
-              <select
-                className={styles.speedSelect}
-                value={walker.speed}
-                disabled={walker.isWalking}
-                onChange={(e) => walker.setSpeed(e.target.value as WalkSpeed)}
+              )}
+              <button
+                type="button"
+                className={styles.controlBtn}
+                disabled={state.isRunning}
+                onClick={runner.step}
               >
-                <option value="slow">Slow</option>
-                <option value="normal">Normal</option>
-                <option value="fast">Fast</option>
-              </select>
-            </section>
-          </>
+                Step
+              </button>
+              <button
+                type="button"
+                className={styles.controlBtn}
+                onClick={runner.reset}
+              >
+                Reset
+              </button>
+            </div>
+
+            <select
+              className={styles.speedSelect}
+              value={runner.speed}
+              disabled={state.isRunning}
+              onChange={(e) => runner.setSpeed(e.target.value as SearchSpeed)}
+            >
+              <option value="slow">Slow</option>
+              <option value="normal">Normal</option>
+              <option value="fast">Fast</option>
+            </select>
+          </section>
         ) : (
           <>
             <section className={styles.card}>
@@ -371,7 +318,7 @@ export function Toolbar() {
               <p className={styles.hint}>
                 {state.sensorMode === "lidar"
                   ? "Full 360° sweep every step - sees everything nearby, in every direction, at once."
-                  : "A narrow forward-facing cone - only sees what's directly ahead, easy to miss things to the side."}
+                  : "Checks all 4 directions before moving - narrower field of view per glance than LiDAR."}
               </p>
             </section>
 
@@ -427,14 +374,126 @@ export function Toolbar() {
                 <option value="fast">Fast</option>
               </select>
             </section>
+
+            <section className={styles.card}>
+              <h2 className={styles.cardLabel}>Known-Map Plan</h2>
+              <div className={styles.runControls}>
+                {planner.isPlanning ? (
+                  <button
+                    type="button"
+                    className={styles.controlBtn}
+                    onClick={planner.pause}
+                  >
+                    Pause
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className={`${styles.controlBtn} ${styles.controlBtnPrimary}`}
+                    disabled={!planner.canPlan}
+                    onClick={planner.play}
+                  >
+                    Plan
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className={styles.controlBtn}
+                  disabled={!planner.canPlan || planner.isPlanning}
+                  onClick={planner.step}
+                >
+                  Step
+                </button>
+                <button
+                  type="button"
+                  className={styles.controlBtn}
+                  disabled={!planner.canPlan}
+                  onClick={planner.reset}
+                >
+                  Reset
+                </button>
+              </div>
+
+              <select
+                className={styles.speedSelect}
+                value={planner.speed}
+                disabled={planner.isPlanning}
+                onChange={(e) => planner.setSpeed(e.target.value as PlanSpeed)}
+              >
+                <option value="slow">Slow</option>
+                <option value="normal">Normal</option>
+                <option value="fast">Fast</option>
+              </select>
+
+              <p className={styles.hint}>
+                Runs {state.algorithm === "astar" ? "A*" : "Dijkstra"} on only
+                what's been sensed so far - from the robot's current position,
+                whether or not it ever reached the goal. Unsensed cells are
+                treated as blocked.
+              </p>
+            </section>
           </>
         )}
+
+        <section className={styles.card}>
+          <h2 className={styles.cardLabel}>Robot</h2>
+          <div className={styles.runControls}>
+            {walker.isWalking ? (
+              <button
+                type="button"
+                className={styles.controlBtn}
+                onClick={walker.pause}
+              >
+                Pause
+              </button>
+            ) : (
+              <button
+                type="button"
+                className={`${styles.controlBtn} ${styles.controlBtnPrimary}`}
+                disabled={!walker.canWalk}
+                onClick={walker.play}
+              >
+                Walk
+              </button>
+            )}
+            <button
+              type="button"
+              className={styles.controlBtn}
+              disabled={!walker.canWalk || walker.isWalking}
+              onClick={walker.step}
+            >
+              Step
+            </button>
+            <button
+              type="button"
+              className={styles.controlBtn}
+              disabled={!walker.canWalk}
+              onClick={walker.reset}
+            >
+              Reset
+            </button>
+          </div>
+
+          <select
+            className={styles.speedSelect}
+            value={walker.speed}
+            disabled={walker.isWalking}
+            onChange={(e) => walker.setSpeed(e.target.value as WalkSpeed)}
+          >
+            <option value="slow">Slow</option>
+            <option value="normal">Normal</option>
+            <option value="fast">Fast</option>
+          </select>
+        </section>
       </div>
 
       <div className={styles.statusBar}>
         <span
           className={`${styles.statusDot} ${
-            state.isRunning || walker.isWalking || explorer.isExploring
+            state.isRunning ||
+            walker.isWalking ||
+            explorer.isExploring ||
+            planner.isPlanning
               ? styles.statusDotActive
               : ""
           }`}
