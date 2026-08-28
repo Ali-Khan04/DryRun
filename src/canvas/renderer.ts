@@ -51,7 +51,7 @@ export function renderGrid(ctx: CanvasRenderingContext2D, state: SimState) {
       const x = c * cellSize;
       const y = r * cellSize;
 
-      // In reactive mode, anything the robot hasn't sensed yet is hidden 
+      // In reactive mode, anything the robot hasn't sensed yet is hidden
       // that's the entire point of the mode. Start/goal stay visible so the
       // user doesn't lose track of the layout they drew; the algorithm
       // itself never reads pixels, only sense() output.
@@ -136,7 +136,7 @@ function drawSensorOverlay(ctx: CanvasRenderingContext2D, state: SimState) {
     ctx.arc(cx, cy, rangePx, 0, Math.PI * 2);
     ctx.stroke();
   } else {
-    const facing = (robot.angleDeg * Math.PI) / 180;
+    const facing = lastReading.facingRad; // was: (robot.angleDeg * Math.PI) / 180
     const half = (ULTRASONIC_CONE_DEG * Math.PI) / 360;
 
     ctx.beginPath();
