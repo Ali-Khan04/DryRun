@@ -3,6 +3,7 @@ import { useSim } from "../context/SimulationContext";
 import { useHistory } from "../history/HistoryContext";
 import { renderGrid } from "./renderer";
 import styles from "./SimCanvas.module.css";
+import { RobotCallout } from "./RobotCallout";
 
 const WRAPPER_PADDING = 16;
 const MIN_COLS = 20;
@@ -107,21 +108,24 @@ export function SimCanvas() {
 
   return (
     <div className={styles.wrapper} ref={wrapperRef}>
-      <div className={styles.canvasFrame}>
-        <canvas
-          ref={canvasRef}
-          width={config.cols * config.cellSize}
-          height={config.rows * config.cellSize}
-          className={styles.canvas}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={stopDrawing}
-          onMouseLeave={stopDrawing}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={stopDrawing}
-          onTouchCancel={stopDrawing}
-        />
+      <div className={styles.canvasStage}>
+        <div className={styles.canvasFrame}>
+          <canvas
+            ref={canvasRef}
+            width={config.cols * config.cellSize}
+            height={config.rows * config.cellSize}
+            className={styles.canvas}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={stopDrawing}
+            onMouseLeave={stopDrawing}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={stopDrawing}
+            onTouchCancel={stopDrawing}
+          />
+        </div>
+        <RobotCallout />
       </div>
     </div>
   );
