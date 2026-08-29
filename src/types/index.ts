@@ -18,7 +18,7 @@ export interface RobotState {
 
 export type DrawMode = "wall" | "erase" | "start" | "goal";
 export type Algorithm = "astar" | "dijkstra";
-export type PlanningMode = "global" | "reactive";
+export type PlanningMode = "global" | "reactive" | "slam";
 export type SensorMode = "lidar" | "ultrasonic";
 export type Knowledge = "unknown" | "free" | "wall";
 export type CalloutTone = "info" | "success" | "warn";

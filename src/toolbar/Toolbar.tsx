@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useSim } from "../context/SimulationContext";
 import { useHistory } from "../history/HistoryContext";
 import {
@@ -23,15 +23,55 @@ const ALGORITHMS: { value: Algorithm; label: string }[] = [
   { value: "dijkstra", label: "Dijkstra" },
 ];
 
-const PLANNING_MODES: { value: PlanningMode; label: string }[] = [
-  { value: "global", label: "Global" },
-  { value: "reactive", label: "Reactive" },
+const PLANNING_MODES: {
+  value: PlanningMode;
+  label: string;
+  blurb: string;
+}[] = [
+  {
+    value: "global",
+    label: "Global",
+    blurb: "Full map known up front",
+  },
+  {
+    value: "reactive",
+    label: "Reactive",
+    blurb: "Senses and moves on its own",
+  },
+  {
+    value: "slam",
+    label: "SLAM",
+    blurb: "Maps as it goes, then plans",
+  },
 ];
+
+const PLANNING_MODE_INFO: Record<PlanningMode, string> = {
+  global:
+    "The algorithm sees the entire grid before moving. A classic full-information search - place a start and goal, then run A* or Dijkstra straight through.",
+  reactive:
+    "The robot has no map to start. It senses what's around it and decides, one step at a time, whether to head for the goal or the nearest unexplored space - no A*/Dijkstra involved, just reflexes.",
+  slam:
+    "The robot builds its own map as it senses, the way real SLAM (Simultaneous Localization and Mapping) works. Place a start and goal, sense to reveal territory, then run A* or Dijkstra on the map you've discovered so far to compute and walk the shortest known path.",
+};
+
+const ALGORITHM_INFO: Record<Algorithm, string> = {
+  astar:
+    "A* explores toward the goal first, using distance as a guide. Usually faster, fewer cells checked.",
+  dijkstra:
+    "Dijkstra explores evenly in all directions. Slower, but guaranteed shortest path even with no sense of direction.",
+};
 
 const SENSOR_MODES: { value: SensorMode; label: string }[] = [
   { value: "lidar", label: "LiDAR" },
   { value: "ultrasonic", label: "Ultrasonic" },
 ];
+
+const SENSOR_INFO: Record<SensorMode, string> = {
+  lidar:
+    "Full 360° sweep every step - sees everything nearby, in every direction, at once.",
+  ultrasonic:
+    "Checks all 4 directions before moving - narrower field of view per glance than LiDAR.",
+};
 
 function LogoMark() {
   return (
@@ -64,6 +104,93 @@ function LogoMark() {
   );
 }
 
+// Small "?" trigger that reveals an explanation panel on demand, so the
+// toolbar doesn't have to keep a paragraph of prose permanently on screen
+// for every setting. Only one popover is open at a time (see Toolbar).
+function InfoButton({
+  id,
+  label,
+  openId,
+  onToggle,
+  children,
+}: {
+  id: string;
+  label: string;
+  openId: string | null;
+  onToggle: (id: string) => void;
+  children: ReactNode;
+}) {
+  const open = openId === id;
+  return (
+    <span className={styles.infoWrap} data-info-wrap>
+      <button
+        type="button"
+        className={`${styles.infoBtn} ${open ? styles.infoBtnActive : ""}`}
+        aria-label={label}
+        aria-expanded={open}
+        onClick={() => onToggle(id)}
+      >
+        ?
+      </button>
+      {open && (
+        <div className={styles.infoPopover} role="tooltip">
+          {children}
+        </div>
+      )}
+    </span>
+  );
+}
+
+// A card whose body can be tucked away once the user knows what it does.
+// The header always shows the current selection, so collapsing a section
+// never hides state - only the controls used to change it.
+function Section({
+  title,
+  summary,
+  collapsible,
+  collapsed,
+  onToggleCollapse,
+  info,
+  children,
+}: {
+  title: string;
+  summary?: string;
+  collapsible?: boolean;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
+  info?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className={styles.card}>
+      <div className={styles.cardHeader}>
+        <button
+          type="button"
+          className={styles.cardHeaderMain}
+          onClick={collapsible ? onToggleCollapse : undefined}
+          aria-expanded={collapsible ? !collapsed : undefined}
+          disabled={!collapsible}
+        >
+          <h2 className={styles.cardLabel}>{title}</h2>
+          {collapsed && summary && (
+            <span className={styles.cardSummary}>{summary}</span>
+          )}
+          {collapsible && (
+            <span
+              className={`${styles.chevron} ${collapsed ? "" : styles.chevronOpen}`}
+              aria-hidden="true"
+            />
+          )}
+        </button>
+        {info}
+      </div>
+      {(!collapsible || !collapsed) && (
+        <div className={styles.cardBody}>{children}</div>
+      )}
+    </section>
+  );
+}
+
 export function Toolbar() {
   const { state, dispatch } = useSim();
   const history = useHistory();
@@ -71,6 +198,18 @@ export function Toolbar() {
   const walker = usePathWalker();
   const explorer = useExplorer();
   const planner = useKnownPlanner();
+
+  const [openInfo, setOpenInfo] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({
+    algorithm: true,
+    sensor: true,
+  });
+  const toolbarRef = useRef<HTMLDivElement | null>(null);
+
+  const toggleInfo = (id: string) =>
+    setOpenInfo((cur) => (cur === id ? null : id));
+  const toggleSection = (id: string) =>
+    setCollapsed((cur) => ({ ...cur, [id]: !cur[id] }));
 
   const isGridEmpty =
     !state.robot &&
@@ -80,6 +219,25 @@ export function Toolbar() {
         (cell) => cell.type === "empty" && !cell.explored && !cell.inPath,
       ),
     );
+
+  // Close any open popover on outside click / Escape, like a normal menu.
+  useEffect(() => {
+    if (!openInfo) return;
+
+    const onPointerDown = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest("[data-info-wrap]")) setOpenInfo(null);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpenInfo(null);
+    };
+    window.addEventListener("mousedown", onPointerDown);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("mousedown", onPointerDown);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [openInfo]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -128,8 +286,20 @@ export function Toolbar() {
     dispatch({ type: "CLEAR_GRID" });
   };
 
+  const activeAlgorithmLabel = ALGORITHMS.find(
+    (a) => a.value === state.algorithm,
+  )?.label;
+  const activeSensorLabel = SENSOR_MODES.find(
+    (s) => s.value === state.sensorMode,
+  )?.label;
+
+  const showAlgorithmSection =
+    state.planningMode === "global" || state.planningMode === "slam";
+  const showSensorSection =
+    state.planningMode === "reactive" || state.planningMode === "slam";
+
   return (
-    <div className={styles.toolbar}>
+    <div className={styles.toolbar} ref={toolbarRef}>
       <header className={styles.header}>
         <LogoMark />
         <div className={styles.headerText}>
@@ -189,9 +359,21 @@ export function Toolbar() {
         </section>
 
         <section className={styles.card}>
-          <h2 className={styles.cardLabel}>Mode</h2>
+          <div className={styles.cardHeader}>
+            <h2 className={styles.cardLabel} style={{ flex: 1 }}>
+              Mode
+            </h2>
+            <InfoButton
+              id="mode"
+              label="What does each mode do?"
+              openId={openInfo}
+              onToggle={toggleInfo}
+            >
+              {PLANNING_MODE_INFO[state.planningMode]}
+            </InfoButton>
+          </div>
           <div
-            className={styles.modeGroup}
+            className={styles.tabGroup}
             role="group"
             aria-label="Planning mode"
           >
@@ -200,8 +382,8 @@ export function Toolbar() {
                 key={value}
                 type="button"
                 disabled={state.isRunning}
-                className={`${styles.modeBtn} ${
-                  state.planningMode === value ? styles.modeBtnActive : ""
+                className={`${styles.tabBtn} ${
+                  state.planningMode === value ? styles.tabBtnActive : ""
                 }`}
                 aria-pressed={state.planningMode === value}
                 onClick={() => handlePlanningModeChange(value)}
@@ -210,39 +392,100 @@ export function Toolbar() {
               </button>
             ))}
           </div>
-          <p className={styles.hint}>
-            {state.planningMode === "global"
-              ? "The algorithm sees the entire grid before moving - a classic full-information search."
-              : "The robot only knows what its sensors have detected - it plans with a partial, growing map."}
+          <p className={styles.hintCompact}>
+            {
+              PLANNING_MODES.find((m) => m.value === state.planningMode)
+                ?.blurb
+            }
+            {" — tap "}
+            <span className={styles.hintInfoRef}>?</span>
+            {" above for details."}
           </p>
         </section>
 
-        <section className={styles.card}>
-          <h2 className={styles.cardLabel}>Algorithm</h2>
-          <div className={styles.modeGroup} role="group" aria-label="Algorithm">
-            {ALGORITHMS.map(({ value, label }) => (
-              <button
-                key={value}
-                type="button"
-                disabled={state.isRunning}
-                className={`${styles.modeBtn} ${
-                  state.algorithm === value ? styles.modeBtnActive : ""
-                }`}
-                aria-pressed={state.algorithm === value}
-                onClick={() => handleAlgorithmChange(value)}
+        {showAlgorithmSection && (
+          <Section
+            title="Algorithm"
+            summary={activeAlgorithmLabel}
+            collapsible
+            collapsed={collapsed.algorithm}
+            onToggleCollapse={() => toggleSection("algorithm")}
+            info={
+              <InfoButton
+                id="algorithm"
+                label="How do the algorithms differ?"
+                openId={openInfo}
+                onToggle={toggleInfo}
               >
-                {label}
-              </button>
-            ))}
-          </div>
-          <p className={styles.hint}>
-            {state.algorithm === "astar"
-              ? "A* explores toward the goal first, using distance as a guide - usually faster, fewer cells checked."
-              : "Dijkstra explores evenly in all directions - slower, but guaranteed shortest path even with no sense of direction."}
-          </p>
-        </section>
+                {ALGORITHM_INFO[state.algorithm]}
+              </InfoButton>
+            }
+          >
+            <div
+              className={styles.modeGroup}
+              role="group"
+              aria-label="Algorithm"
+            >
+              {ALGORITHMS.map(({ value, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  disabled={state.isRunning}
+                  className={`${styles.modeBtn} ${
+                    state.algorithm === value ? styles.modeBtnActive : ""
+                  }`}
+                  aria-pressed={state.algorithm === value}
+                  onClick={() => handleAlgorithmChange(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </Section>
+        )}
 
-        {state.planningMode === "global" ? (
+        {showSensorSection && (
+          <Section
+            title="Sensor"
+            summary={activeSensorLabel}
+            collapsible
+            collapsed={collapsed.sensor}
+            onToggleCollapse={() => toggleSection("sensor")}
+            info={
+              <InfoButton
+                id="sensor"
+                label="How do the sensors differ?"
+                openId={openInfo}
+                onToggle={toggleInfo}
+              >
+                {SENSOR_INFO[state.sensorMode]}
+              </InfoButton>
+            }
+          >
+            <div
+              className={styles.modeGroup}
+              role="group"
+              aria-label="Sensor mode"
+            >
+              {SENSOR_MODES.map(({ value, label }) => (
+                <button
+                  key={value}
+                  type="button"
+                  disabled={state.isRunning}
+                  className={`${styles.modeBtn} ${
+                    state.sensorMode === value ? styles.modeBtnActive : ""
+                  }`}
+                  aria-pressed={state.sensorMode === value}
+                  onClick={() => handleSensorModeChange(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </Section>
+        )}
+
+        {state.planningMode === "global" && (
           <section className={styles.card}>
             <h2 className={styles.cardLabel}>Search</h2>
             <div className={styles.runControls}>
@@ -291,39 +534,97 @@ export function Toolbar() {
               <option value="fast">Fast</option>
             </select>
           </section>
-        ) : (
+        )}
+
+        {state.planningMode === "reactive" && (
+          <section className={styles.card}>
+            <div className={styles.cardHeader}>
+              <h2 className={styles.cardLabel} style={{ flex: 1 }}>
+                Explore
+              </h2>
+              <InfoButton
+                id="explore"
+                label="What does Explore do?"
+                openId={openInfo}
+                onToggle={toggleInfo}
+              >
+                The robot senses from where it stands, then moves one cell
+                toward the goal if it's already visible, or toward the
+                nearest unexplored edge otherwise. Repeats until it reaches
+                the goal or runs out of reachable ground.
+              </InfoButton>
+            </div>
+            <div className={styles.runControls}>
+              {explorer.isExploring ? (
+                <button
+                  type="button"
+                  className={styles.controlBtn}
+                  onClick={explorer.pause}
+                >
+                  Pause
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={`${styles.controlBtn} ${styles.controlBtnPrimary}`}
+                  disabled={!explorer.canExplore}
+                  onClick={explorer.play}
+                >
+                  Explore
+                </button>
+              )}
+              <button
+                type="button"
+                className={styles.controlBtn}
+                disabled={!explorer.canExplore || explorer.isExploring}
+                onClick={explorer.step}
+              >
+                Step
+              </button>
+              <button
+                type="button"
+                className={styles.controlBtn}
+                disabled={!explorer.canExplore}
+                onClick={explorer.reset}
+              >
+                Reset
+              </button>
+            </div>
+
+            <select
+              className={styles.speedSelect}
+              value={explorer.speed}
+              disabled={explorer.isExploring}
+              onChange={(e) =>
+                explorer.setSpeed(e.target.value as ExploreSpeed)
+              }
+            >
+              <option value="slow">Slow</option>
+              <option value="normal">Normal</option>
+              <option value="fast">Fast</option>
+            </select>
+          </section>
+        )}
+
+        {state.planningMode === "slam" && (
           <>
             <section className={styles.card}>
-              <h2 className={styles.cardLabel}>Sensor</h2>
-              <div
-                className={styles.modeGroup}
-                role="group"
-                aria-label="Sensor mode"
-              >
-                {SENSOR_MODES.map(({ value, label }) => (
-                  <button
-                    key={value}
-                    type="button"
-                    disabled={state.isRunning}
-                    className={`${styles.modeBtn} ${
-                      state.sensorMode === value ? styles.modeBtnActive : ""
-                    }`}
-                    aria-pressed={state.sensorMode === value}
-                    onClick={() => handleSensorModeChange(value)}
-                  >
-                    {label}
-                  </button>
-                ))}
+              <div className={styles.cardHeader}>
+                <h2 className={styles.cardLabel} style={{ flex: 1 }}>
+                  Build Map
+                </h2>
+                <InfoButton
+                  id="slam-map"
+                  label="What does Build Map do?"
+                  openId={openInfo}
+                  onToggle={toggleInfo}
+                >
+                  Drives the robot around, sensing as it goes and filling in
+                  the known map - exactly like a real SLAM front-end would.
+                  Nothing is planned yet; this just reveals territory for the
+                  planner below to use.
+                </InfoButton>
               </div>
-              <p className={styles.hint}>
-                {state.sensorMode === "lidar"
-                  ? "Full 360° sweep every step - sees everything nearby, in every direction, at once."
-                  : "Checks all 4 directions before moving - narrower field of view per glance than LiDAR."}
-              </p>
-            </section>
-
-            <section className={styles.card}>
-              <h2 className={styles.cardLabel}>Explore</h2>
               <div className={styles.runControls}>
                 {explorer.isExploring ? (
                   <button
@@ -340,7 +641,7 @@ export function Toolbar() {
                     disabled={!explorer.canExplore}
                     onClick={explorer.play}
                   >
-                    Explore
+                    Sense
                   </button>
                 )}
                 <button
@@ -376,7 +677,23 @@ export function Toolbar() {
             </section>
 
             <section className={styles.card}>
-              <h2 className={styles.cardLabel}>Known-Map Plan</h2>
+              <div className={styles.cardHeader}>
+                <h2 className={styles.cardLabel} style={{ flex: 1 }}>
+                  Plan Path
+                </h2>
+                <InfoButton
+                  id="slam-plan"
+                  label="What does Plan Path do?"
+                  openId={openInfo}
+                  onToggle={toggleInfo}
+                >
+                  Runs {state.algorithm === "astar" ? "A*" : "Dijkstra"} on
+                  only what's been sensed so far, from the robot's current
+                  position. Unsensed cells are treated as blocked, so if the
+                  goal hasn't been discovered yet, this will come back with
+                  no path until you build more of the map above.
+                </InfoButton>
+              </div>
               <div className={styles.runControls}>
                 {planner.isPlanning ? (
                   <button
@@ -424,19 +741,25 @@ export function Toolbar() {
                 <option value="normal">Normal</option>
                 <option value="fast">Fast</option>
               </select>
-
-              <p className={styles.hint}>
-                Runs {state.algorithm === "astar" ? "A*" : "Dijkstra"} on only
-                what's been sensed so far - from the robot's current position,
-                whether or not it ever reached the goal. Unsensed cells are
-                treated as blocked.
-              </p>
             </section>
           </>
         )}
 
         <section className={styles.card}>
-          <h2 className={styles.cardLabel}>Robot</h2>
+          <div className={styles.cardHeader}>
+            <h2 className={styles.cardLabel} style={{ flex: 1 }}>
+              Robot
+            </h2>
+            <InfoButton
+              id="robot"
+              label="What does Walk do?"
+              openId={openInfo}
+              onToggle={toggleInfo}
+            >
+              Moves the robot step by step along the most recently computed
+              path, whichever mode produced it.
+            </InfoButton>
+          </div>
           <div className={styles.runControls}>
             {walker.isWalking ? (
               <button

@@ -121,8 +121,10 @@ export function simReducer(state: SimState, action: SimAction): SimState {
         robot: startPos ? { pos: startPos, angleDeg: 0 } : null,
         statusMsg:
           action.mode === "reactive"
-            ? "Reactive mode - the robot only knows what it senses."
-            : "Global mode - full map known, plan a path.",
+            ? "Reactive mode - place a start and goal, then explore."
+            : action.mode === "slam"
+              ? "SLAM mode - place a start and goal, sense to build the map, then plan."
+              : "Global mode - full map known, plan a path.",
       };
     }
 
