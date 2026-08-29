@@ -24,7 +24,10 @@ const C = {
 export function renderGrid(ctx: CanvasRenderingContext2D, state: SimState) {
   const { grid, robot, config, planningMode, known } = state;
   const { rows, cols, cellSize } = config;
-  const reactive = planningMode === "reactive";
+  // Both sense-driven modes hide unsensed territory - reactive because the
+  // robot is finding its own way, SLAM because the whole point is building
+  // the map before a path can be planned on it.
+  const reactive = planningMode === "reactive" || planningMode === "slam";
 
   ctx.fillStyle = C.bg;
   ctx.fillRect(0, 0, cols * cellSize, rows * cellSize);
