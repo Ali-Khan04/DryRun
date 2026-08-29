@@ -8,8 +8,30 @@ import {
 import { usePathWalker, type WalkSpeed } from "../algorithms/usePathWalker";
 import { useExplorer, type ExploreSpeed } from "../algorithms/useExplorer";
 import { useKnownPlanner, type PlanSpeed } from "../algorithms/useKnownPlanner";
+import { ModeInfoModal, type ModalKind } from "./ModeInfoModal";
 import type { DrawMode, Algorithm, PlanningMode, SensorMode } from "../types";
 import styles from "./Toolbar.module.css";
+
+const SEEN_KEY_PREFIX = "dryrun_seen_mode_";
+const SEEN_WELCOME_KEY = "dryrun_seen_welcome";
+
+// localStorage can throw in private-browsing/embedded contexts - never let
+// the onboarding nice-to-have break the app.
+function hasSeen(key: string): boolean {
+  try {
+    return window.localStorage.getItem(key) === "1";
+  } catch {
+    return true;
+  }
+}
+
+function markSeen(key: string) {
+  try {
+    window.localStorage.setItem(key, "1");
+  } catch {
+    // ignore
+  }
+}
 
 const MODES: { mode: DrawMode; label: string; swatchClass: string }[] = [
   { mode: "wall", label: "Wall", swatchClass: styles.swatchWall },
@@ -44,15 +66,6 @@ const PLANNING_MODES: {
     blurb: "Maps as it goes, then plans",
   },
 ];
-
-const PLANNING_MODE_INFO: Record<PlanningMode, string> = {
-  global:
-    "The algorithm sees the entire grid before moving. A classic full-information search - place a start and goal, then run A* or Dijkstra straight through.",
-  reactive:
-    "The robot has no map to start. It senses what's around it and decides, one step at a time, whether to head for the goal or the nearest unexplored space - no A*/Dijkstra involved, just reflexes.",
-  slam:
-    "The robot builds its own map as it senses, the way real SLAM (Simultaneous Localization and Mapping) works. Place a start and goal, sense to reveal territory, then run A* or Dijkstra on the map you've discovered so far to compute and walk the shortest known path.",
-};
 
 const ALGORITHM_INFO: Record<Algorithm, string> = {
   astar:
@@ -204,6 +217,18 @@ export function Toolbar() {
     algorithm: true,
     sensor: true,
   });
+  // First-ever visit: introduce the app itself. Doubles as marking Global
+  // (the mode the app opens in) as "seen" so it isn't immediately re-shown
+  // the first time the user deliberately clicks its tab. Computed lazily
+  // (not in an effect) so there's no extra render on mount.
+  const [modalKind, setModalKind] = useState<ModalKind | null>(() => {
+    if (!hasSeen(SEEN_WELCOME_KEY)) {
+      markSeen(SEEN_WELCOME_KEY);
+      markSeen(`${SEEN_KEY_PREFIX}global`);
+      return "welcome";
+    }
+    return null;
+  });
   const toolbarRef = useRef<HTMLDivElement | null>(null);
 
   const toggleInfo = (id: string) =>
@@ -268,6 +293,37 @@ export function Toolbar() {
     explorer.reset();
     planner.reset();
     dispatch({ type: "SET_PLANNING_MODE", mode });
+
+    const key = `${SEEN_KEY_PREFIX}${mode}`;
+    if (!hasSeen(key)) {
+      setModalKind(mode);
+      markSeen(key);
+    }
+  };
+
+  // Wraps explorer.pause() so pausing actually tells the user what just
+  // happened: the map isn't gone, it's frozen and ready to plan against.
+  const handleMapPause = () => {
+    explorer.pause();
+    const msg =
+      "Map building paused - the revealed area is frozen. Place a new start/goal inside it if you like, then head to Plan Path.";
+    dispatch({ type: "SET_STATUS", msg });
+    if (state.robot) {
+      dispatch({
+        type: "SET_CALLOUT",
+        pos: state.robot.pos,
+        text: "Map paused - ready to plan with what's revealed so far",
+        tone: "info",
+      });
+    }
+  };
+
+  const handleExplorePause = () => {
+    explorer.pause();
+    dispatch({
+      type: "SET_STATUS",
+      msg: "Exploration paused. Resume, step through, or reset to start over.",
+    });
   };
 
   const handleClearEndpoints = () => {
@@ -286,6 +342,9 @@ export function Toolbar() {
     dispatch({ type: "CLEAR_GRID" });
   };
 
+  const activeModeLabel = PLANNING_MODES.find(
+    (m) => m.value === state.planningMode,
+  )?.label;
   const activeAlgorithmLabel = ALGORITHMS.find(
     (a) => a.value === state.algorithm,
   )?.label;
@@ -306,6 +365,14 @@ export function Toolbar() {
           <span className={styles.brand}>DryRun</span>
           <span className={styles.tagline}>robotics sandbox</span>
         </div>
+        <button
+          type="button"
+          className={styles.helpBtn}
+          aria-label={`How ${activeModeLabel} mode works`}
+          onClick={() => setModalKind(state.planningMode)}
+        >
+          ?
+        </button>
       </header>
 
       <div className={styles.body}>
@@ -359,19 +426,7 @@ export function Toolbar() {
         </section>
 
         <section className={styles.card}>
-          <div className={styles.cardHeader}>
-            <h2 className={styles.cardLabel} style={{ flex: 1 }}>
-              Mode
-            </h2>
-            <InfoButton
-              id="mode"
-              label="What does each mode do?"
-              openId={openInfo}
-              onToggle={toggleInfo}
-            >
-              {PLANNING_MODE_INFO[state.planningMode]}
-            </InfoButton>
-          </div>
+          <h2 className={styles.cardLabel}>Mode</h2>
           <div
             className={styles.tabGroup}
             role="group"
@@ -392,15 +447,21 @@ export function Toolbar() {
               </button>
             ))}
           </div>
-          <p className={styles.hintCompact}>
-            {
-              PLANNING_MODES.find((m) => m.value === state.planningMode)
-                ?.blurb
-            }
-            {" — tap "}
-            <span className={styles.hintInfoRef}>?</span>
-            {" above for details."}
-          </p>
+          <div className={styles.modeBlurbRow}>
+            <p className={styles.hintCompact}>
+              {
+                PLANNING_MODES.find((m) => m.value === state.planningMode)
+                  ?.blurb
+              }
+            </p>
+            <button
+              type="button"
+              className={styles.linkBtn}
+              onClick={() => setModalKind(state.planningMode)}
+            >
+              How {activeModeLabel} mode works →
+            </button>
+          </div>
         </section>
 
         {showAlgorithmSection && (
@@ -559,7 +620,7 @@ export function Toolbar() {
                 <button
                   type="button"
                   className={styles.controlBtn}
-                  onClick={explorer.pause}
+                  onClick={handleExplorePause}
                 >
                   Pause
                 </button>
@@ -630,7 +691,7 @@ export function Toolbar() {
                   <button
                     type="button"
                     className={styles.controlBtn}
-                    onClick={explorer.pause}
+                    onClick={handleMapPause}
                   >
                     Pause
                   </button>
@@ -674,6 +735,10 @@ export function Toolbar() {
                 <option value="normal">Normal</option>
                 <option value="fast">Fast</option>
               </select>
+              <p className={styles.hintCompact}>
+                Place start/goal before or after this - pause any time to
+                freeze the map and plan with what's revealed so far.
+              </p>
             </section>
 
             <section className={styles.card}>
@@ -823,6 +888,10 @@ export function Toolbar() {
         />
         <span className={styles.statusText}>{state.statusMsg}</span>
       </div>
+
+      {modalKind && (
+        <ModeInfoModal kind={modalKind} onClose={() => setModalKind(null)} />
+      )}
     </div>
   );
 }
