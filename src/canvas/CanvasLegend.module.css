@@ -1,0 +1,114 @@
+.legend {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 6;
+  min-width: 132px;
+  background: var(--panel-raised);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-panel);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: none;
+  background: none;
+  padding: 7px 10px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.headerLabel {
+  flex: 1;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-faint);
+}
+
+.chevron {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid var(--text-faint);
+  border-bottom: 1.5px solid var(--text-faint);
+  transform: rotate(45deg);
+  transition: transform 0.12s ease;
+}
+
+.chevronOpen {
+  transform: rotate(225deg);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 2px 10px 9px;
+  list-style: none;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.label {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.swatch {
+  flex-shrink: 0;
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+}
+
+/* Colors below intentionally mirror src/canvas/palette.ts - keep in sync
+   if the renderer palette ever changes. */
+
+.swatchStart {
+  border-radius: 50%;
+  background: #ff8f5c;
+}
+
+.swatchGoal {
+  background: transparent;
+  border: 1.5px solid #4ce8b8;
+  border-radius: 50%;
+}
+
+.swatchRobot {
+  background: #ff8f5c;
+  border: 1.5px solid #ffc49a;
+}
+
+.swatchWall {
+  background: #2b3342;
+  border: 1px solid #3d4759;
+}
+
+.swatchExplored {
+  background: #12241f;
+  border: 1px solid var(--hairline);
+}
+
+.swatchPath {
+  background: #4ce8b822;
+  border: 1px solid #4ce8b8;
+}
+
+.swatchFog {
+  background: rgba(11, 13, 18, 0.88);
+  border: 1px solid var(--hairline);
+}

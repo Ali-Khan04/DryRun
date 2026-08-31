@@ -4,6 +4,7 @@ import { useHistory } from "../history/HistoryContext";
 import { renderGrid } from "./renderer";
 import styles from "./SimCanvas.module.css";
 import { RobotCallout } from "./RobotCallout";
+import { CanvasLegend } from "./CanvasLegend";
 
 const WRAPPER_PADDING = 16;
 const MIN_COLS = 20;
@@ -126,6 +127,7 @@ export function SimCanvas() {
           />
         </div>
         <RobotCallout />
+        <CanvasLegend />
       </div>
     </div>
   );
