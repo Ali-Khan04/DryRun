@@ -80,9 +80,21 @@ const CONTENT: Record<ModalKind, ModalContent> = {
 export function ModeInfoModal({
   kind,
   onClose,
+  primaryLabel = "Got it",
+  onPrimary,
+  secondaryLabel,
+  onSecondary,
 }: {
   kind: ModalKind;
   onClose: () => void;
+  /** Label for the main action button. Defaults to "Got it". */
+  primaryLabel?: string;
+  /** Defaults to onClose when not provided. */
+  onPrimary?: () => void;
+  /** When set, renders a second, lower-emphasis button next to the primary one. */
+  secondaryLabel?: string;
+  /** Defaults to onClose when not provided. */
+  onSecondary?: () => void;
 }) {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -142,9 +154,24 @@ export function ModeInfoModal({
           </ul>
         </div>
 
-        <button type="button" className={styles.gotItBtn} onClick={onClose}>
-          Got it
-        </button>
+        <div className={styles.footer}>
+          {secondaryLabel && (
+            <button
+              type="button"
+              className={styles.secondaryBtn}
+              onClick={onSecondary ?? onClose}
+            >
+              {secondaryLabel}
+            </button>
+          )}
+          <button
+            type="button"
+            className={styles.gotItBtn}
+            onClick={onPrimary ?? onClose}
+          >
+            {primaryLabel}
+          </button>
+        </div>
       </div>
     </div>
   );

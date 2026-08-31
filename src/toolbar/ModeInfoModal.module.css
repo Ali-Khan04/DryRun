@@ -131,9 +131,35 @@
   color: var(--copper);
 }
 
-.gotItBtn {
-  align-self: flex-start;
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
   margin-top: 4px;
+}
+
+.secondaryBtn {
+  border: 1px solid var(--hairline);
+  background: var(--panel);
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 9px 16px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    border-color 0.12s ease,
+    color 0.12s ease;
+}
+
+.secondaryBtn:hover {
+  color: var(--text);
+  border-color: var(--text-faint);
+}
+
+.gotItBtn {
   border: 1px solid var(--signal);
   background: var(--signal);
   color: #06231c;
