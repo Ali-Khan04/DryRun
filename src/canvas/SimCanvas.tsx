@@ -9,6 +9,11 @@ import { CanvasLegend } from "./CanvasLegend";
 const WRAPPER_PADDING = 16;
 const MIN_COLS = 20;
 const MIN_ROWS = 12;
+// On phone-width viewports, the 20-col floor (400px at cellSize 20) can
+// exceed the space actually available, forcing pointless horizontal
+// scroll. Relax the floor there so the grid fits its wrapper instead.
+const MIN_COLS_COMPACT = 12;
+const COMPACT_BREAKPOINT = 480;
 
 export function SimCanvas() {
   const { state, dispatch } = useSim();
@@ -25,7 +30,9 @@ export function SimCanvas() {
     const resize = (width: number, height: number) => {
       const availW = width - WRAPPER_PADDING * 2;
       const availH = height - WRAPPER_PADDING * 2;
-      const cols = Math.max(MIN_COLS, Math.floor(availW / config.cellSize));
+      const minCols =
+        window.innerWidth <= COMPACT_BREAKPOINT ? MIN_COLS_COMPACT : MIN_COLS;
+      const cols = Math.max(minCols, Math.floor(availW / config.cellSize));
       const rows = Math.max(MIN_ROWS, Math.floor(availH / config.cellSize));
       dispatch({ type: "RESIZE_GRID", rows, cols });
     };

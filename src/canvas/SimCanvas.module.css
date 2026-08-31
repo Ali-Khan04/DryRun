@@ -31,3 +31,9 @@
   image-rendering: pixelated;
   touch-action: none;
 }
+
+@media (max-width: 768px) {
+  .wrapper {
+    padding: 12px;
+  }
+}
