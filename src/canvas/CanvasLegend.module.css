@@ -112,3 +112,24 @@
   background: rgba(11, 13, 18, 0.88);
   border: 1px solid var(--hairline);
 }
+
+@media (max-width: 480px) {
+  .legend {
+    left: 8px;
+    bottom: 8px;
+    min-width: 112px;
+  }
+
+  .header {
+    padding: 5px 8px;
+  }
+
+  .list {
+    padding: 2px 8px 7px;
+    gap: 4px;
+  }
+
+  .label {
+    font-size: 10px;
+  }
+}

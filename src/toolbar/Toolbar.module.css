@@ -4,9 +4,38 @@
   flex-shrink: 0;
   width: 248px;
   height: 100vh;
+  height: 100dvh;
   background: var(--panel);
   border-right: 1px solid var(--hairline);
   font-family: var(--font-mono);
+}
+
+/* Stacked mobile layout */
+@media (max-width: 768px) {
+  .toolbar {
+    width: 100%;
+    height: auto;
+    max-height: 48vh;
+    max-height: 48dvh;
+    border-right: none;
+    border-bottom: 1px solid var(--hairline);
+  }
+}
+
+@media (max-width: 480px) {
+  .toolbar {
+    max-height: 52vh;
+    max-height: 52dvh;
+  }
+
+  .header {
+    padding: 14px 12px;
+  }
+
+  .body {
+    padding: 10px;
+    gap: 10px;
+  }
 }
 
 .header {
