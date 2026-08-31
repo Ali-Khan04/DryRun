@@ -9,6 +9,7 @@ import { usePathWalker, type WalkSpeed } from "../algorithms/usePathWalker";
 import { useExplorer, type ExploreSpeed } from "../algorithms/useExplorer";
 import { useKnownPlanner, type PlanSpeed } from "../algorithms/useKnownPlanner";
 import { ModeInfoModal, type ModalKind } from "./ModeInfoModal";
+import { useTour } from "../tour/TourContext";
 import type { DrawMode, Algorithm, PlanningMode, SensorMode } from "../types";
 import styles from "./Toolbar.module.css";
 
@@ -211,6 +212,7 @@ export function Toolbar() {
   const walker = usePathWalker();
   const explorer = useExplorer();
   const planner = useKnownPlanner();
+  const tour = useTour();
 
   const [openInfo, setOpenInfo] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({
@@ -368,6 +370,7 @@ export function Toolbar() {
         <button
           type="button"
           className={styles.helpBtn}
+          data-tour="help-button"
           aria-label={`How ${activeModeLabel} mode works`}
           onClick={() => setModalKind(state.planningMode)}
         >
@@ -376,7 +379,7 @@ export function Toolbar() {
       </header>
 
       <div className={styles.body}>
-        <section className={styles.card}>
+        <section className={styles.card} data-tour="draw-mode">
           <h2 className={styles.cardLabel}>Draw Mode</h2>
           <div className={styles.modeGroup} role="group" aria-label="Draw mode">
             {MODES.map(({ mode, label, swatchClass }) => (
@@ -425,7 +428,7 @@ export function Toolbar() {
           </div>
         </section>
 
-        <section className={styles.card}>
+        <section className={styles.card} data-tour="planning-mode">
           <h2 className={styles.cardLabel}>Mode</h2>
           <div
             className={styles.tabGroup}
@@ -890,7 +893,21 @@ export function Toolbar() {
       </div>
 
       {modalKind && (
-        <ModeInfoModal kind={modalKind} onClose={() => setModalKind(null)} />
+        <ModeInfoModal
+          kind={modalKind}
+          onClose={() => setModalKind(null)}
+          {...(modalKind === "welcome"
+            ? {
+                primaryLabel: "Show me around",
+                onPrimary: () => {
+                  setModalKind(null);
+                  tour.start();
+                },
+                secondaryLabel: "Skip, I'll explore",
+                onSecondary: () => setModalKind(null),
+              }
+            : {})}
+        />
       )}
     </div>
   );

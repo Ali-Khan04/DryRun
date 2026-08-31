@@ -37,7 +37,7 @@ export function CanvasLegend() {
   const rows = showsFog ? [...BASE_ROWS, FOG_ROW] : BASE_ROWS;
 
   return (
-    <div className={styles.legend}>
+    <div className={styles.legend} data-tour="legend">
       <button
         type="button"
         className={styles.header}

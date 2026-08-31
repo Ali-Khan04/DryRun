@@ -1,5 +1,7 @@
 import { SimulationProvider } from "./context/SimulationContext";
 import { HistoryProvider } from "./history/HistoryContext";
+import { TourProvider } from "./tour/TourContext";
+import { TourOverlay } from "./tour/TourOverlay";
 import { SimCanvas } from "./canvas/SimCanvas";
 import { Toolbar } from "./toolbar/Toolbar";
 import styles from "./App.module.css";
@@ -8,12 +10,15 @@ export default function App() {
   return (
     <SimulationProvider>
       <HistoryProvider>
-        <div className={styles.app}>
-          <Toolbar />
-          <div className={styles.main}>
-            <SimCanvas />
+        <TourProvider>
+          <div className={styles.app}>
+            <Toolbar />
+            <div className={styles.main}>
+              <SimCanvas />
+            </div>
           </div>
-        </div>
+          <TourOverlay />
+        </TourProvider>
       </HistoryProvider>
     </SimulationProvider>
   );

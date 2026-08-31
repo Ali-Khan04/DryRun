@@ -110,7 +110,7 @@ export function SimCanvas() {
   return (
     <div className={styles.wrapper} ref={wrapperRef}>
       <div className={styles.canvasStage}>
-        <div className={styles.canvasFrame}>
+        <div className={styles.canvasFrame} data-tour="canvas">
           <canvas
             ref={canvasRef}
             width={config.cols * config.cellSize}
