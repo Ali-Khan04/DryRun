@@ -305,11 +305,15 @@ export function Toolbar() {
 
   // Wraps explorer.pause() so pausing actually tells the user what just
   // happened: the map isn't gone, it's frozen and ready to plan against.
+  // Named "Use This Map" in the UI rather than "Pause" for exactly that
+  // reason - the label itself should say what the action leads to.
   const handleMapPause = () => {
     explorer.pause();
-    const msg =
-      "Map building paused - the revealed area is frozen. Place a new start/goal inside it if you like, then head to Plan Path.";
-    dispatch({ type: "SET_STATUS", msg });
+    dispatch({
+      type: "SET_STATUS",
+      msg: "Map building paused. This is the map the robot will plan with - re-place Start/Goal or edit walls anywhere inside the revealed area, then hit Plan in Plan Path below to route through it with A*/Dijkstra.",
+      tone: "guide",
+    });
     if (state.robot) {
       dispatch({
         type: "SET_CALLOUT",
@@ -324,7 +328,8 @@ export function Toolbar() {
     explorer.pause();
     dispatch({
       type: "SET_STATUS",
-      msg: "Exploration paused. Resume, step through, or reset to start over.",
+      msg: "Exploration paused. Resume, step through one move at a time, or reset to start over.",
+      tone: "guide",
     });
   };
 
@@ -695,8 +700,9 @@ export function Toolbar() {
                     type="button"
                     className={styles.controlBtn}
                     onClick={handleMapPause}
+                    title="Stop sensing and freeze the map for planning"
                   >
-                    Pause
+                    Use This Map
                   </button>
                 ) : (
                   <button

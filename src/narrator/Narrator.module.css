@@ -1,0 +1,140 @@
+.narrator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--hairline);
+  background: var(--panel);
+  font-family: var(--font-body);
+}
+
+.indicator {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.label {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding-right: 10px;
+  border-right: 1px solid var(--hairline);
+}
+
+.message {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--text);
+}
+
+.guide {
+  background: var(--signal-dim);
+}
+.guide .indicator {
+  background: var(--signal);
+  animation: glowPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes glowPulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow:
+      0 0 3px var(--signal),
+      0 0 7px rgba(76, 232, 184, 0.45);
+  }
+
+  50% {
+    opacity: 0.65;
+    transform: scale(0.95);
+    box-shadow: 0 0 2px rgba(76, 232, 184, 0.2);
+  }
+}
+.guide .label {
+  color: var(--signal);
+  border-color: rgba(76, 232, 184, 0.25);
+}
+
+.progress {
+  background: var(--copper-dim);
+}
+.progress .indicator {
+  background: var(--copper);
+  color: var(--copper);
+
+  animation: pulse 1.4s ease-in-out infinite;
+}
+.progress .label {
+  color: var(--copper);
+  border-color: rgba(255, 143, 92, 0.3);
+}
+
+.success {
+  background: var(--signal-dim);
+}
+.success .indicator {
+  background: var(--signal);
+  box-shadow: 0 0 0 3px var(--signal-dim);
+}
+.success .label {
+  color: var(--signal);
+  border-color: rgba(76, 232, 184, 0.25);
+}
+
+.warn {
+  background: var(--danger-dim);
+}
+.warn .indicator {
+  background: var(--danger);
+}
+.warn .label {
+  color: var(--danger);
+  border-color: rgba(255, 107, 107, 0.3);
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow:
+      0 0 4px currentColor,
+      0 0 8px currentColor;
+  }
+
+  50% {
+    opacity: 0.45;
+    transform: scale(0.8);
+    box-shadow: 0 0 1px currentColor;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .progress .indicator {
+    animation: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .narrator {
+    padding: 10px 14px;
+    flex-wrap: wrap;
+  }
+
+  .label {
+    border-right: none;
+    padding-right: 0;
+  }
+
+  .message {
+    flex-basis: 100%;
+    font-size: 12.5px;
+  }
+}
