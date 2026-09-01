@@ -13,13 +13,19 @@ export type PlanSpeed = keyof typeof SPEED_MS;
 // place "the SLAM map" actually gets handed to A*/Dijkstra; if the goal
 // hasn't been sensed yet, it's blocked here too, so the search correctly
 // comes back "no path" instead of fabricating one.
-function buildKnownGrid(known: Knowledge[][], rows: number, cols: number): Cell[][] {
-  return Array.from({ length: rows }, (_, r) =>
-    Array.from({ length: cols }, (_, c) => ({
-      type: known[r][c] === "free" ? "empty" : "wall",
-      explored: false,
-      inPath: false,
-    })) as Cell[],
+function buildKnownGrid(
+  known: Knowledge[][],
+  rows: number,
+  cols: number,
+): Cell[][] {
+  return Array.from(
+    { length: rows },
+    (_, r) =>
+      Array.from({ length: cols }, (_, c) => ({
+        type: known[r][c] === "free" ? "empty" : "wall",
+        explored: false,
+        inPath: false,
+      })) as Cell[],
   );
 }
 
@@ -59,7 +65,11 @@ export function useKnownPlanner() {
   const advance = useCallback((): boolean => {
     const gen = ensureGenerator();
     if (!gen) {
-      dispatch({ type: "SET_STATUS", msg: "Place a start and a goal first." });
+      dispatch({
+        type: "SET_STATUS",
+        msg: "Place a Start and a Goal first, both are needed before planning a route.",
+        tone: "warn",
+      });
       return true;
     }
 
@@ -73,13 +83,15 @@ export function useKnownPlanner() {
       dispatch({ type: "SET_PATH", path: value.path });
       dispatch({
         type: "SET_STATUS",
-        msg: `Path found from known map - ${value.path.length} cells.`,
+        msg: `Route planned: ${value.path.length} cells, using only what's been sensed. Hit Walk in Robot to send it to Nav2 for execution.`,
+        tone: "success",
       });
       return true;
     } else if (value.kind === "no-path") {
       dispatch({
         type: "SET_STATUS",
-        msg: "No path in the known map yet - goal may be undiscovered or blocked.",
+        msg: "No route in the known map yet, the goal may be undiscovered, or the known path is blocked. Go build more of the map first.",
+        tone: "warn",
       });
       return true;
     }
@@ -95,9 +107,18 @@ export function useKnownPlanner() {
 
   const play = useCallback(() => {
     if (!ensureGenerator()) {
-      dispatch({ type: "SET_STATUS", msg: "Place a start and a goal first." });
+      dispatch({
+        type: "SET_STATUS",
+        msg: "Place a Start and a Goal first - both are needed before planning a route.",
+        tone: "warn",
+      });
       return;
     }
+    dispatch({
+      type: "SET_STATUS",
+      msg: `Planning a route with ${state.algorithm === "astar" ? "A*" : "Dijkstra"} over just the map that's been sensed so far...`,
+      tone: "progress",
+    });
     setIsPlanning(true);
     dispatch({ type: "SET_RUNNING", val: true });
     stopTimer();
@@ -108,7 +129,7 @@ export function useKnownPlanner() {
         dispatch({ type: "SET_RUNNING", val: false });
       }
     }, SPEED_MS[speed]);
-  }, [advance, dispatch, ensureGenerator, speed, stopTimer]);
+  }, [advance, dispatch, ensureGenerator, speed, stopTimer, state.algorithm]);
 
   const pause = useCallback(() => {
     stopTimer();

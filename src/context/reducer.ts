@@ -1,5 +1,18 @@
-import type { SimState, SimAction, Cell, Knowledge, GridPos } from "../types";
+import type { SimState, SimAction, Cell, Knowledge, GridPos, PlanningMode } from "../types";
 import { findCell } from "../utils/grid";
+
+// The exact next button to point at differs per mode, so both "Start and
+// Goal are now set" messages (from SET_CELL and from switching modes with
+// both already placed) route through this one place.
+function readyToRunMessage(mode: PlanningMode): string {
+  if (mode === "reactive") {
+    return "Start and Goal are set. Hit Explore below - the robot senses and moves on its own, with no map.";
+  }
+  if (mode === "slam") {
+    return "Start and Goal are set. Hit Sense in Build Map below to start revealing the map.";
+  }
+  return "Start and Goal are set. Hit Run in Search below to plan a route.";
+}
 
 function makeGrid(rows: number, cols: number): Cell[][] {
   return Array.from({ length: rows }, () =>
@@ -37,7 +50,8 @@ export function makeInitialState(): SimState {
     calloutTone: "info",
     config: { rows, cols, cellSize: 20 },
     isRunning: false,
-    statusMsg: "Draw walls, then place start and goal.",
+    statusMsg: "Place a Start and a Goal on the grid to begin.",
+    statusTone: "guide",
   };
 }
 
@@ -68,8 +82,9 @@ export function simReducer(state: SimState, action: SimAction): SimState {
           grid,
           robot: { pos: { row, col }, angleDeg: 0 },
           statusMsg: state.goal
-            ? "Start and goal set."
-            : "Start placed. Now place a goal.",
+            ? readyToRunMessage(state.planningMode)
+            : "Start placed. Now place a Goal to continue.",
+          statusTone: "guide",
         };
       } else if (mode === "goal") {
         for (let r = 0; r < grid.length; r++)
@@ -83,8 +98,9 @@ export function simReducer(state: SimState, action: SimAction): SimState {
           grid,
           goal: { row, col },
           statusMsg: state.robot
-            ? "Start and goal set."
-            : "Goal placed. Now place a start.",
+            ? readyToRunMessage(state.planningMode)
+            : "Goal placed. Now place a Start to continue.",
+          statusTone: "guide",
         };
       }
 
@@ -106,6 +122,21 @@ export function simReducer(state: SimState, action: SimAction): SimState {
         r.map((c) => ({ ...c, explored: false, inPath: false })),
       );
       const startPos = findCell(grid, "start");
+      const ready = !!startPos && !!state.goal;
+
+      let statusMsg: string;
+      if (ready) {
+        statusMsg = readyToRunMessage(action.mode);
+      } else if (action.mode === "reactive") {
+        statusMsg =
+          "Reactive mode. Place a Start and a Goal - the robot will sense and move with no map at all.";
+      } else if (action.mode === "slam") {
+        statusMsg =
+          "SLAM mode. Place a Start and a Goal - then Sense builds the map and A*/Dijkstra plans a route through it.";
+      } else {
+        statusMsg =
+          "Global mode. Place a Start and a Goal, then Run plans a route with the whole map already known.";
+      }
 
       return {
         ...state,
@@ -119,12 +150,8 @@ export function simReducer(state: SimState, action: SimAction): SimState {
         calloutTone: "info",
         isRunning: false,
         robot: startPos ? { pos: startPos, angleDeg: 0 } : null,
-        statusMsg:
-          action.mode === "reactive"
-            ? "Reactive mode - place a start and goal, then explore."
-            : action.mode === "slam"
-              ? "SLAM mode - place a start and goal, sense to build the map, then plan."
-              : "Global mode - full map known, plan a path.",
+        statusMsg,
+        statusTone: "guide",
       };
     }
 
@@ -141,7 +168,8 @@ export function simReducer(state: SimState, action: SimAction): SimState {
         calloutPos: null,
         calloutText: null,
         calloutTone: "info",
-        statusMsg: "Grid cleared.",
+        statusMsg: "Grid cleared. Place a Start and a Goal to begin.",
+        statusTone: "guide",
       };
     }
 
@@ -156,7 +184,8 @@ export function simReducer(state: SimState, action: SimAction): SimState {
         calloutPos: null,
         calloutText: null,
         calloutTone: "info",
-        statusMsg: "Search reset. Ready to run again.",
+        statusMsg: "Route cleared. Ready to plan again whenever you like.",
+        statusTone: "guide",
       };
     }
 
@@ -169,7 +198,8 @@ export function simReducer(state: SimState, action: SimAction): SimState {
         calloutPos: null,
         calloutText: null,
         calloutTone: "info",
-        statusMsg: "Exploration reset.",
+        statusMsg: "Map cleared. Ready to build it again.",
+        statusTone: "guide",
       };
     }
 
@@ -190,12 +220,17 @@ export function simReducer(state: SimState, action: SimAction): SimState {
         calloutPos: null,
         calloutText: null,
         calloutTone: "info",
-        statusMsg: "Start and goal cleared.",
+        statusMsg: "Start and Goal cleared. Place them again to continue.",
+        statusTone: "guide",
       };
     }
 
     case "SET_STATUS":
-      return { ...state, statusMsg: action.msg };
+      return {
+        ...state,
+        statusMsg: action.msg,
+        statusTone: action.tone ?? "guide",
+      };
 
     case "SET_RUNNING":
       return { ...state, isRunning: action.val };

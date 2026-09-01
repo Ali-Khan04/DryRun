@@ -4,6 +4,7 @@ import { TourProvider } from "./tour/TourContext";
 import { TourOverlay } from "./tour/TourOverlay";
 import { SimCanvas } from "./canvas/SimCanvas";
 import { Toolbar } from "./toolbar/Toolbar";
+import { Narrator } from "./narrator/Narrator";
 import styles from "./App.module.css";
 
 export default function App() {
@@ -14,6 +15,7 @@ export default function App() {
           <div className={styles.app}>
             <Toolbar />
             <div className={styles.main}>
+              <Narrator />
               <SimCanvas />
             </div>
           </div>

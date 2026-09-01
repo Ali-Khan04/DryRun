@@ -55,6 +55,11 @@ export function usePathWalker() {
 
   const play = useCallback(() => {
     if (!state.path || state.path.length === 0) return;
+    dispatch({
+      type: "SET_STATUS",
+      msg: "Nav2 is driving the robot along the planned route, this is what a real robot does after A*/Dijkstra hands it a path.",
+      tone: "progress",
+    });
     setIsWalking(true);
     dispatch({ type: "SET_RUNNING", val: true });
     stopTimer();
@@ -63,7 +68,11 @@ export function usePathWalker() {
         stopTimer();
         setIsWalking(false);
         dispatch({ type: "SET_RUNNING", val: false });
-        dispatch({ type: "SET_STATUS", msg: "Robot reached the goal." });
+        dispatch({
+          type: "SET_STATUS",
+          msg: "Arrived! Nav2 followed the planned route all the way to the goal.",
+          tone: "success",
+        });
       }
     }, SPEED_MS[speed]);
   }, [advance, dispatch, speed, state.path, stopTimer]);
@@ -72,6 +81,11 @@ export function usePathWalker() {
     stopTimer();
     setIsWalking(false);
     dispatch({ type: "SET_RUNNING", val: false });
+    dispatch({
+      type: "SET_STATUS",
+      msg: "Walk paused. Resume, step through one move at a time, or reset to start the route over.",
+      tone: "guide",
+    });
   }, [dispatch, stopTimer]);
 
   // place the robot back to the start of the path (index 0), for replaying

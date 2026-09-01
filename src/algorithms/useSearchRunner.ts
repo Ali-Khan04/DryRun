@@ -37,7 +37,11 @@ export function useSearchRunner() {
   const advance = useCallback((): boolean => {
     const gen = ensureGenerator();
     if (!gen) {
-      dispatch({ type: "SET_STATUS", msg: "Place a start and a goal first." });
+      dispatch({
+        type: "SET_STATUS",
+        msg: "Place a Start and a Goal first, both are needed before planning a route.",
+        tone: "warn",
+      });
       return true;
     }
 
@@ -60,7 +64,8 @@ export function useSearchRunner() {
       dispatch({ type: "SET_PATH", path: value.path });
       dispatch({
         type: "SET_STATUS",
-        msg: `Path found - ${value.path.length} cells.`,
+        msg: `Route found - ${value.path.length} cells. Hit Walk in Robot to send it to Nav2 for execution.`,
+        tone: "success",
       });
       dispatch({
         type: "SET_CALLOUT",
@@ -70,7 +75,11 @@ export function useSearchRunner() {
       });
       return true;
     } else if (value.kind === "no-path") {
-      dispatch({ type: "SET_STATUS", msg: "No path exists." });
+      dispatch({
+        type: "SET_STATUS",
+        msg: "No route exists between Start and Goal!, try clearing a wall or moving one of them.",
+        tone: "warn",
+      });
       if (state.robot) {
         dispatch({
           type: "SET_CALLOUT",
@@ -93,9 +102,18 @@ export function useSearchRunner() {
 
   const play = useCallback(() => {
     if (!ensureGenerator()) {
-      dispatch({ type: "SET_STATUS", msg: "Place a start and a goal first." });
+      dispatch({
+        type: "SET_STATUS",
+        msg: "Place a Start and a Goal first, both are needed before planning a route.",
+        tone: "warn",
+      });
       return;
     }
+    dispatch({
+      type: "SET_STATUS",
+      msg: `Searching for the shortest route with ${state.algorithm === "astar" ? "A*" : "Dijkstra"} the whole map is already known.`,
+      tone: "progress",
+    });
     dispatch({ type: "SET_RUNNING", val: true });
     stopTimer();
     timerRef.current = window.setInterval(() => {
@@ -104,7 +122,7 @@ export function useSearchRunner() {
         dispatch({ type: "SET_RUNNING", val: false });
       }
     }, SPEED_MS[speed]);
-  }, [advance, dispatch, ensureGenerator, speed, stopTimer]);
+  }, [advance, dispatch, ensureGenerator, speed, stopTimer, state.algorithm]);
 
   const pause = useCallback(() => {
     stopTimer();

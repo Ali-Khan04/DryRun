@@ -22,6 +22,10 @@ export type PlanningMode = "global" | "reactive" | "slam";
 export type SensorMode = "lidar" | "ultrasonic";
 export type Knowledge = "unknown" | "free" | "wall";
 export type CalloutTone = "info" | "success" | "warn";
+// Tone for the big narrator banner - distinct from CalloutTone (the small
+// per-move speech bubbles) since the banner tracks the current PHASE of
+// the workflow rather than individual algorithm decisions.
+export type StatusTone = "guide" | "progress" | "success" | "warn";
 
 export interface SensorReading {
   origin: GridPos;
@@ -59,6 +63,7 @@ export interface SimState {
   config: SimConfig;
   isRunning: boolean;
   statusMsg: string;
+  statusTone: StatusTone;
 }
 
 export type SimAction =
@@ -73,7 +78,7 @@ export type SimAction =
   | { type: "RESET_SEARCH" }
   | { type: "RESET_EXPLORE" }
   | { type: "CLEAR_ENDPOINTS" }
-  | { type: "SET_STATUS"; msg: string }
+  | { type: "SET_STATUS"; msg: string; tone?: StatusTone }
   | { type: "SET_RUNNING"; val: boolean }
   | { type: "MARK_PATH"; cells: GridPos[] }
   | { type: "MARK_EXPLORED"; cells: GridPos[] }
