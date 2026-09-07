@@ -1,26 +1,26 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useSim } from "../context/SimulationContext";
-import { useHistory } from "../history/HistoryContext";
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useSim } from '../context/SimulationContext';
+import { useHistory } from '../history/HistoryContext';
 import {
   useSearchRunner,
   type SearchSpeed,
-} from "../algorithms/useSearchRunner";
-import { usePathWalker, type WalkSpeed } from "../algorithms/usePathWalker";
-import { useExplorer, type ExploreSpeed } from "../algorithms/useExplorer";
-import { useKnownPlanner, type PlanSpeed } from "../algorithms/useKnownPlanner";
-import { ModeInfoModal, type ModalKind } from "./ModeInfoModal";
-import { useTour } from "../tour/TourContext";
-import type { DrawMode, Algorithm, PlanningMode, SensorMode } from "../types";
-import styles from "./Toolbar.module.css";
+} from '../algorithms/useSearchRunner';
+import { usePathWalker, type WalkSpeed } from '../algorithms/usePathWalker';
+import { useExplorer, type ExploreSpeed } from '../algorithms/useExplorer';
+import { useKnownPlanner, type PlanSpeed } from '../algorithms/useKnownPlanner';
+import { ModeInfoModal, type ModalKind } from './ModeInfoModal';
+import { useTour } from '../tour/TourContext';
+import type { DrawMode, Algorithm, PlanningMode, SensorMode } from '../types';
+import styles from './Toolbar.module.css';
 
-const SEEN_KEY_PREFIX = "dryrun_seen_mode_";
-const SEEN_WELCOME_KEY = "dryrun_seen_welcome";
+const SEEN_KEY_PREFIX = 'dryrun_seen_mode_';
+const SEEN_WELCOME_KEY = 'dryrun_seen_welcome';
 
 // localStorage can throw in private-browsing/embedded contexts - never let
 // the onboarding nice-to-have break the app.
 function hasSeen(key: string): boolean {
   try {
-    return window.localStorage.getItem(key) === "1";
+    return window.localStorage.getItem(key) === '1';
   } catch {
     return true;
   }
@@ -28,22 +28,22 @@ function hasSeen(key: string): boolean {
 
 function markSeen(key: string) {
   try {
-    window.localStorage.setItem(key, "1");
+    window.localStorage.setItem(key, '1');
   } catch {
     // ignore
   }
 }
 
 const MODES: { mode: DrawMode; label: string; swatchClass: string }[] = [
-  { mode: "wall", label: "Wall", swatchClass: styles.swatchWall },
-  { mode: "erase", label: "Erase", swatchClass: styles.swatchErase },
-  { mode: "start", label: "Start", swatchClass: styles.swatchStart },
-  { mode: "goal", label: "Goal", swatchClass: styles.swatchGoal },
+  { mode: 'wall', label: 'Wall', swatchClass: styles.swatchWall },
+  { mode: 'erase', label: 'Erase', swatchClass: styles.swatchErase },
+  { mode: 'start', label: 'Start', swatchClass: styles.swatchStart },
+  { mode: 'goal', label: 'Goal', swatchClass: styles.swatchGoal },
 ];
 
 const ALGORITHMS: { value: Algorithm; label: string }[] = [
-  { value: "astar", label: "A*" },
-  { value: "dijkstra", label: "Dijkstra" },
+  { value: 'astar', label: 'A*' },
+  { value: 'dijkstra', label: 'Dijkstra' },
 ];
 
 const PLANNING_MODES: {
@@ -52,39 +52,39 @@ const PLANNING_MODES: {
   blurb: string;
 }[] = [
   {
-    value: "global",
-    label: "Global",
-    blurb: "Full map known up front",
+    value: 'global',
+    label: 'Global',
+    blurb: 'Full map known up front',
   },
   {
-    value: "reactive",
-    label: "Reactive",
-    blurb: "Senses and moves on its own",
+    value: 'reactive',
+    label: 'Reactive',
+    blurb: 'Senses and moves on its own',
   },
   {
-    value: "slam",
-    label: "SLAM",
-    blurb: "Maps as it goes, then plans",
+    value: 'slam',
+    label: 'SLAM',
+    blurb: 'Maps as it goes, then plans',
   },
 ];
 
 const ALGORITHM_INFO: Record<Algorithm, string> = {
   astar:
-    "A* explores toward the goal first, using distance as a guide. Usually faster, fewer cells checked.",
+    'A* explores toward the goal first, using distance as a guide. Usually faster, fewer cells checked.',
   dijkstra:
-    "Dijkstra explores evenly in all directions. Slower, but guaranteed shortest path even with no sense of direction.",
+    'Dijkstra explores evenly in all directions. Slower, but guaranteed shortest path even with no sense of direction.',
 };
 
 const SENSOR_MODES: { value: SensorMode; label: string }[] = [
-  { value: "lidar", label: "LiDAR" },
-  { value: "ultrasonic", label: "Ultrasonic" },
+  { value: 'lidar', label: 'LiDAR' },
+  { value: 'ultrasonic', label: 'Ultrasonic' },
 ];
 
 const SENSOR_INFO: Record<SensorMode, string> = {
   lidar:
-    "Full 360° sweep every step - sees everything nearby, in every direction, at once.",
+    'Full 360° sweep every step - sees everything nearby, in every direction, at once.',
   ultrasonic:
-    "Checks all 4 directions before moving - narrower field of view per glance than LiDAR.",
+    'Checks all 4 directions before moving - narrower field of view per glance than LiDAR.',
 };
 
 function LogoMark() {
@@ -139,7 +139,7 @@ function InfoButton({
     <span className={styles.infoWrap} data-info-wrap>
       <button
         type="button"
-        className={`${styles.infoBtn} ${open ? styles.infoBtnActive : ""}`}
+        className={`${styles.infoBtn} ${open ? styles.infoBtnActive : ''}`}
         aria-label={label}
         aria-expanded={open}
         onClick={() => onToggle(id)}
@@ -191,7 +191,7 @@ function Section({
           )}
           {collapsible && (
             <span
-              className={`${styles.chevron} ${collapsed ? "" : styles.chevronOpen}`}
+              className={`${styles.chevron} ${collapsed ? '' : styles.chevronOpen}`}
               aria-hidden="true"
             />
           )}
@@ -227,7 +227,7 @@ export function Toolbar() {
     if (!hasSeen(SEEN_WELCOME_KEY)) {
       markSeen(SEEN_WELCOME_KEY);
       markSeen(`${SEEN_KEY_PREFIX}global`);
-      return "welcome";
+      return 'welcome';
     }
     return null;
   });
@@ -243,7 +243,7 @@ export function Toolbar() {
     !state.goal &&
     state.grid.every((row) =>
       row.every(
-        (cell) => cell.type === "empty" && !cell.explored && !cell.inPath,
+        (cell) => cell.type === 'empty' && !cell.explored && !cell.inPath,
       ),
     );
 
@@ -253,40 +253,40 @@ export function Toolbar() {
 
     const onPointerDown = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      if (!target.closest("[data-info-wrap]")) setOpenInfo(null);
+      if (!target.closest('[data-info-wrap]')) setOpenInfo(null);
     };
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpenInfo(null);
+      if (e.key === 'Escape') setOpenInfo(null);
     };
-    window.addEventListener("mousedown", onPointerDown);
-    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener('mousedown', onPointerDown);
+    window.addEventListener('keydown', onKeyDown);
     return () => {
-      window.removeEventListener("mousedown", onPointerDown);
-      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener('mousedown', onPointerDown);
+      window.removeEventListener('keydown', onKeyDown);
     };
   }, [openInfo]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
         if (state.isRunning) return;
         e.preventDefault();
         history.undo();
       }
     };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
   }, [history, state.isRunning]);
 
   const handleAlgorithmChange = (algorithm: Algorithm) => {
     runner.reset();
     planner.reset();
-    dispatch({ type: "SET_ALGORITHM", algorithm });
+    dispatch({ type: 'SET_ALGORITHM', algorithm });
   };
 
   const handleSensorModeChange = (mode: SensorMode) => {
     explorer.reset();
-    dispatch({ type: "SET_SENSOR_MODE", mode });
+    dispatch({ type: 'SET_SENSOR_MODE', mode });
   };
 
   const handlePlanningModeChange = (mode: PlanningMode) => {
@@ -294,7 +294,7 @@ export function Toolbar() {
     walker.reset();
     explorer.reset();
     planner.reset();
-    dispatch({ type: "SET_PLANNING_MODE", mode });
+    dispatch({ type: 'SET_PLANNING_MODE', mode });
 
     const key = `${SEEN_KEY_PREFIX}${mode}`;
     if (!hasSeen(key)) {
@@ -309,17 +309,20 @@ export function Toolbar() {
   // reason - the label itself should say what the action leads to.
   const handleMapPause = () => {
     explorer.pause();
+    // Freeze the sensed map and make sure the next Plan starts from a fresh
+    // search instead of resuming an old generator/path from an earlier map.
+    planner.reset();
     dispatch({
-      type: "SET_STATUS",
-      msg: "Map building paused. This is the map the robot will plan with - re-place Start/Goal or edit walls anywhere inside the revealed area, then hit Plan in Plan Path below to route through it with A*/Dijkstra.",
-      tone: "guide",
+      type: 'SET_STATUS',
+      msg: 'Map building paused. This is the map the robot will plan with - re-place Start/Goal or edit walls anywhere inside the revealed area, then hit Plan in Plan Path below to route through it with A*/Dijkstra.',
+      tone: 'guide',
     });
     if (state.robot) {
       dispatch({
-        type: "SET_CALLOUT",
+        type: 'SET_CALLOUT',
         pos: state.robot.pos,
         text: "Map paused - ready to plan with what's revealed so far",
-        tone: "info",
+        tone: 'info',
       });
     }
   };
@@ -327,9 +330,9 @@ export function Toolbar() {
   const handleExplorePause = () => {
     explorer.pause();
     dispatch({
-      type: "SET_STATUS",
-      msg: "Exploration paused. Resume, step through one move at a time, or reset to start over.",
-      tone: "guide",
+      type: 'SET_STATUS',
+      msg: 'Exploration paused. Resume, step through one move at a time, or reset to start over.',
+      tone: 'guide',
     });
   };
 
@@ -338,7 +341,7 @@ export function Toolbar() {
     runner.reset();
     explorer.reset();
     planner.reset();
-    dispatch({ type: "CLEAR_ENDPOINTS" });
+    dispatch({ type: 'CLEAR_ENDPOINTS' });
   };
 
   const handleClearGrid = () => {
@@ -346,7 +349,7 @@ export function Toolbar() {
     runner.reset();
     explorer.reset();
     planner.reset();
-    dispatch({ type: "CLEAR_GRID" });
+    dispatch({ type: 'CLEAR_GRID' });
   };
 
   const activeModeLabel = PLANNING_MODES.find(
@@ -360,9 +363,9 @@ export function Toolbar() {
   )?.label;
 
   const showAlgorithmSection =
-    state.planningMode === "global" || state.planningMode === "slam";
+    state.planningMode === 'global' || state.planningMode === 'slam';
   const showSensorSection =
-    state.planningMode === "reactive" || state.planningMode === "slam";
+    state.planningMode === 'reactive' || state.planningMode === 'slam';
 
   return (
     <div className={styles.toolbar} ref={toolbarRef}>
@@ -393,10 +396,10 @@ export function Toolbar() {
                 type="button"
                 disabled={state.isRunning}
                 className={`${styles.modeBtn} ${
-                  state.drawMode === mode ? styles.modeBtnActive : ""
+                  state.drawMode === mode ? styles.modeBtnActive : ''
                 }`}
                 aria-pressed={state.drawMode === mode}
-                onClick={() => dispatch({ type: "SET_DRAW_MODE", mode })}
+                onClick={() => dispatch({ type: 'SET_DRAW_MODE', mode })}
               >
                 <span className={`${styles.swatch} ${swatchClass}`} />
                 {label}
@@ -446,7 +449,7 @@ export function Toolbar() {
                 type="button"
                 disabled={state.isRunning}
                 className={`${styles.tabBtn} ${
-                  state.planningMode === value ? styles.tabBtnActive : ""
+                  state.planningMode === value ? styles.tabBtnActive : ''
                 }`}
                 aria-pressed={state.planningMode === value}
                 onClick={() => handlePlanningModeChange(value)}
@@ -478,7 +481,7 @@ export function Toolbar() {
             summary={activeAlgorithmLabel}
             collapsible
             collapsed={collapsed.algorithm}
-            onToggleCollapse={() => toggleSection("algorithm")}
+            onToggleCollapse={() => toggleSection('algorithm')}
             info={
               <InfoButton
                 id="algorithm"
@@ -501,7 +504,7 @@ export function Toolbar() {
                   type="button"
                   disabled={state.isRunning}
                   className={`${styles.modeBtn} ${
-                    state.algorithm === value ? styles.modeBtnActive : ""
+                    state.algorithm === value ? styles.modeBtnActive : ''
                   }`}
                   aria-pressed={state.algorithm === value}
                   onClick={() => handleAlgorithmChange(value)}
@@ -519,7 +522,7 @@ export function Toolbar() {
             summary={activeSensorLabel}
             collapsible
             collapsed={collapsed.sensor}
-            onToggleCollapse={() => toggleSection("sensor")}
+            onToggleCollapse={() => toggleSection('sensor')}
             info={
               <InfoButton
                 id="sensor"
@@ -542,7 +545,7 @@ export function Toolbar() {
                   type="button"
                   disabled={state.isRunning}
                   className={`${styles.modeBtn} ${
-                    state.sensorMode === value ? styles.modeBtnActive : ""
+                    state.sensorMode === value ? styles.modeBtnActive : ''
                   }`}
                   aria-pressed={state.sensorMode === value}
                   onClick={() => handleSensorModeChange(value)}
@@ -554,7 +557,7 @@ export function Toolbar() {
           </Section>
         )}
 
-        {state.planningMode === "global" && (
+        {state.planningMode === 'global' && (
           <section className={styles.card}>
             <h2 className={styles.cardLabel}>Search</h2>
             <div className={styles.runControls}>
@@ -605,7 +608,7 @@ export function Toolbar() {
           </section>
         )}
 
-        {state.planningMode === "reactive" && (
+        {state.planningMode === 'reactive' && (
           <section className={styles.card}>
             <div className={styles.cardHeader}>
               <h2 className={styles.cardLabel} style={{ flex: 1 }}>
@@ -618,9 +621,9 @@ export function Toolbar() {
                 onToggle={toggleInfo}
               >
                 The robot senses from where it stands, then moves one cell
-                toward the goal if it's already visible, or toward the
-                nearest unexplored edge otherwise. Repeats until it reaches
-                the goal or runs out of reachable ground.
+                toward the goal if it's already visible, or toward the nearest
+                unexplored edge otherwise. Repeats until it reaches the goal or
+                runs out of reachable ground.
               </InfoButton>
             </div>
             <div className={styles.runControls}>
@@ -675,7 +678,7 @@ export function Toolbar() {
           </section>
         )}
 
-        {state.planningMode === "slam" && (
+        {state.planningMode === 'slam' && (
           <>
             <section className={styles.card}>
               <div className={styles.cardHeader}>
@@ -688,10 +691,10 @@ export function Toolbar() {
                   openId={openInfo}
                   onToggle={toggleInfo}
                 >
-                  Drives the robot around, sensing as it goes and filling in
-                  the known map - exactly like a real SLAM front-end would.
-                  Nothing is planned yet; this just reveals territory for the
-                  planner below to use.
+                  Drives the robot around, sensing as it goes and filling in the
+                  known map - exactly like a real SLAM front-end would. Nothing
+                  is planned yet; this just reveals territory for the planner
+                  below to use.
                 </InfoButton>
               </div>
               <div className={styles.runControls}>
@@ -745,8 +748,8 @@ export function Toolbar() {
                 <option value="fast">Fast</option>
               </select>
               <p className={styles.hintCompact}>
-                Place start/goal before or after this - pause any time to
-                freeze the map and plan with what's revealed so far.
+                Place start/goal before or after this - pause any time to freeze
+                the map and plan with what's revealed so far.
               </p>
             </section>
 
@@ -761,11 +764,11 @@ export function Toolbar() {
                   openId={openInfo}
                   onToggle={toggleInfo}
                 >
-                  Runs {state.algorithm === "astar" ? "A*" : "Dijkstra"} on
-                  only what's been sensed so far, from the robot's current
-                  position. Unsensed cells are treated as blocked, so if the
-                  goal hasn't been discovered yet, this will come back with
-                  no path until you build more of the map above.
+                  Runs {state.algorithm === 'astar' ? 'A*' : 'Dijkstra'} on only
+                  what's been sensed so far, from the robot's current position.
+                  Unsensed cells are treated as blocked, so if the goal hasn't
+                  been discovered yet, this will come back with no path until
+                  you build more of the map above.
                 </InfoButton>
               </div>
               <div className={styles.runControls}>
@@ -892,7 +895,7 @@ export function Toolbar() {
             explorer.isExploring ||
             planner.isPlanning
               ? styles.statusDotActive
-              : ""
+              : ''
           }`}
         />
         <span className={styles.statusText}>{state.statusMsg}</span>
@@ -902,9 +905,9 @@ export function Toolbar() {
         <ModeInfoModal
           kind={modalKind}
           onClose={() => setModalKind(null)}
-          {...(modalKind === "welcome"
+          {...(modalKind === 'welcome'
             ? {
-                primaryLabel: "Show me around",
+                primaryLabel: 'Show me around',
                 onPrimary: () => {
                   setModalKind(null);
                   tour.start();

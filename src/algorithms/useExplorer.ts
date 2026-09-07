@@ -1,9 +1,9 @@
-import { useCallback, useRef, useState } from "react";
-import { useSim } from "../context/SimulationContext";
-import { findCell } from "../utils/grid";
-import { explore } from "./explore";
-import type { ExploreStep } from "./explore";
-import type { Knowledge, SensorReading } from "../types";
+import { useCallback, useRef, useState } from 'react';
+import { useSim } from '../context/SimulationContext';
+import { findCell } from '../utils/grid';
+import { explore } from './explore';
+import type { ExploreStep } from './explore';
+import type { Knowledge, SensorReading } from '../types';
 
 const SPEED_MS = { slow: 260, normal: 120, fast: 40 } as const;
 export type ExploreSpeed = keyof typeof SPEED_MS;
@@ -22,7 +22,7 @@ function knownCoveragePercent(
   let count = 0;
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      if (known[r][c] !== "unknown") {
+      if (known[r][c] !== 'unknown') {
         count++;
         seen.add(`${r},${c}`);
       }
@@ -42,9 +42,9 @@ export function useExplorer() {
   const { state, dispatch } = useSim();
   const generatorRef = useRef<Generator<ExploreStep, void, void> | null>(null);
   const timerRef = useRef<number | null>(null);
-  const [speed, setSpeed] = useState<ExploreSpeed>("normal");
+  const [speed, setSpeed] = useState<ExploreSpeed>('normal');
   const [isExploring, setIsExploring] = useState(false);
-  const isSlam = state.planningMode === "slam";
+  const isSlam = state.planningMode === 'slam';
 
   const stopTimer = useCallback(() => {
     if (timerRef.current !== null) {
@@ -70,26 +70,32 @@ export function useExplorer() {
     const gen = ensureGenerator();
     if (!gen) {
       dispatch({
-        type: "SET_STATUS",
-        msg: "Place a Start and a Goal first - both are needed before the robot can sense anything.",
-        tone: "warn",
+        type: 'SET_STATUS',
+        msg: 'Place a Start and a Goal first - both are needed before the robot can sense anything.',
+        tone: 'warn',
       });
       return true;
     }
 
-    const { value, done } = gen.next();
-    if (done) return true;
+    const result = gen.next();
+    // With strictNullChecks disabled, IteratorResult only narrows reliably
+    // when `done` is checked explicitly against true.
+    if (result.done === true) {
+      generatorRef.current = null;
+      return true;
+    }
+    const value = result.value;
 
-    if (value.kind === "sense") {
-      dispatch({ type: "SENSE_UPDATE", reading: value.reading });
+    if (value.kind === 'sense') {
+      dispatch({ type: 'SENSE_UPDATE', reading: value.reading });
       dispatch({
-        type: "SET_CALLOUT",
+        type: 'SET_CALLOUT',
         pos: value.reading.origin,
         text:
-          state.sensorMode === "lidar"
-            ? "LiDAR sweep: full 360deg scan "
-            : "Ultrasonic scan: exploring unknown territory",
-        tone: "info",
+          state.sensorMode === 'lidar'
+            ? 'LiDAR sweep: full 360deg scan '
+            : 'Ultrasonic scan: exploring unknown territory',
+        tone: 'info',
       });
 
       if (isSlam) {
@@ -101,67 +107,69 @@ export function useExplorer() {
           cols,
         );
         dispatch({
-          type: "SET_STATUS",
+          type: 'SET_STATUS',
           msg: `Building the map - ${pct}% of the grid sensed so far. Keep going, or hit "Use This Map" to stop here and plan with what's revealed.`,
-          tone: "progress",
+          tone: 'progress',
         });
       } else {
         dispatch({
-          type: "SET_STATUS",
-          msg: "Exploring - sensing and deciding where to go, one step at a time, with no map given.",
-          tone: "progress",
+          type: 'SET_STATUS',
+          msg: 'Exploring - sensing and deciding where to go, one step at a time, with no map given.',
+          tone: 'progress',
         });
       }
-    } else if (value.kind === "move") {
+    } else if (value.kind === 'move') {
       dispatch({
-        type: "MOVE_ROBOT",
+        type: 'MOVE_ROBOT',
         pos: value.pos,
         angleDeg: value.angleDeg,
       });
       dispatch({
-        type: "SET_CALLOUT",
+        type: 'SET_CALLOUT',
         pos: value.pos,
         text:
-          value.reason === "goal"
-            ? "Goal is within the known map - heading there"
+          value.reason === 'goal'
+            ? 'Goal is within the known map - heading there'
             : value.sawObstacle
-              ? "Obstacle nearby: rerouting around it"
-              : "Nothing nearby: moving to unexplored area",
-        tone: "info",
+              ? 'Obstacle nearby: rerouting around it'
+              : 'Nothing nearby: moving to unexplored area',
+        tone: 'info',
       });
-    } else if (value.kind === "reached") {
+    } else if (value.kind === 'reached') {
       dispatch({
-        type: "SET_STATUS",
+        type: 'SET_STATUS',
         msg: isSlam
-          ? "Goal reached and map learned! You can now add obstacles or set new Start and Goal points. The robot will use shortest-path planning to navigate the known map."
-          : "Goal reached! Found entirely through live sensing. ",
-        tone: "success",
+          ? 'Goal reached and map learned! You can now add obstacles or set new Start and Goal points. The robot will use shortest-path planning to navigate the known map.'
+          : 'Goal reached! Found entirely through live sensing. ',
+        tone: 'success',
       });
       if (state.robot) {
         dispatch({
-          type: "SET_CALLOUT",
+          type: 'SET_CALLOUT',
           pos: state.robot.pos,
-          text: "Reached the goal!",
-          tone: "success",
+          text: 'Reached the goal!',
+          tone: 'success',
         });
       }
+      generatorRef.current = null;
       return true;
-    } else if (value.kind === "stuck") {
+    } else if (value.kind === 'stuck') {
       dispatch({
-        type: "SET_STATUS",
+        type: 'SET_STATUS',
         msg: isSlam
-          ? "Stuck! the robot explored everywhere it could reach and never found a way to the goal. It may be walled off."
-          : "No reachable path found! The goal may be walled off.",
-        tone: "warn",
+          ? 'Stuck! the robot explored everywhere it could reach and never found a way to the goal. It may be walled off.'
+          : 'No reachable path found! The goal may be walled off.',
+        tone: 'warn',
       });
       if (state.robot) {
         dispatch({
-          type: "SET_CALLOUT",
+          type: 'SET_CALLOUT',
           pos: state.robot.pos,
-          text: "Stuck! no reachable path found",
-          tone: "warn",
+          text: 'Stuck! no reachable path found',
+          tone: 'warn',
         });
       }
+      generatorRef.current = null;
       return true;
     }
 
@@ -185,27 +193,27 @@ export function useExplorer() {
   const play = useCallback(() => {
     if (!ensureGenerator()) {
       dispatch({
-        type: "SET_STATUS",
-        msg: "Place a Start and a Goal first - both are needed before the robot can sense anything.",
-        tone: "warn",
+        type: 'SET_STATUS',
+        msg: 'Place a Start and a Goal first - both are needed before the robot can sense anything.',
+        tone: 'warn',
       });
       return;
     }
     dispatch({
-      type: "SET_STATUS",
+      type: 'SET_STATUS',
       msg: isSlam
-        ? "Building the map - sensing as the robot moves. Watch the fog clear on the grid."
-        : "Exploring - the robot senses and decides where to go, one step at a time, with no map given.",
-      tone: "progress",
+        ? 'Building the map - sensing as the robot moves. Watch the fog clear on the grid.'
+        : 'Exploring - the robot senses and decides where to go, one step at a time, with no map given.',
+      tone: 'progress',
     });
     setIsExploring(true);
-    dispatch({ type: "SET_RUNNING", val: true });
+    dispatch({ type: 'SET_RUNNING', val: true });
     stopTimer();
     timerRef.current = window.setInterval(() => {
       if (advance()) {
         stopTimer();
         setIsExploring(false);
-        dispatch({ type: "SET_RUNNING", val: false });
+        dispatch({ type: 'SET_RUNNING', val: false });
       }
     }, SPEED_MS[speed]);
   }, [advance, dispatch, ensureGenerator, speed, stopTimer, isSlam]);
@@ -213,19 +221,19 @@ export function useExplorer() {
   const pause = useCallback(() => {
     stopTimer();
     setIsExploring(false);
-    dispatch({ type: "SET_RUNNING", val: false });
+    dispatch({ type: 'SET_RUNNING', val: false });
   }, [dispatch, stopTimer]);
 
   const reset = useCallback(() => {
     stopTimer();
     generatorRef.current = null;
     setIsExploring(false);
-    dispatch({ type: "SET_RUNNING", val: false });
-    dispatch({ type: "RESET_EXPLORE" });
+    dispatch({ type: 'SET_RUNNING', val: false });
+    dispatch({ type: 'RESET_EXPLORE' });
 
-    const startPos = findCell(state.grid, "start");
+    const startPos = findCell(state.grid, 'start');
     if (startPos) {
-      dispatch({ type: "MOVE_ROBOT", pos: startPos, angleDeg: 0 });
+      dispatch({ type: 'MOVE_ROBOT', pos: startPos, angleDeg: 0 });
     }
   }, [dispatch, state.grid, stopTimer]);
 
