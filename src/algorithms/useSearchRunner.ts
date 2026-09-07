@@ -1,7 +1,7 @@
-import { useCallback, useRef, useState } from "react";
-import { useSim } from "../context/SimulationContext";
-import { runSearch } from "./pathfinding";
-import type { SearchStep } from "./pathfinding";
+import { useCallback, useRef, useState } from 'react';
+import { useSim } from '../context/SimulationContext';
+import { runSearch } from './pathfinding';
+import type { SearchStep } from './pathfinding';
 
 const SPEED_MS = { slow: 120, normal: 40, fast: 8 } as const;
 export type SearchSpeed = keyof typeof SPEED_MS;
@@ -10,7 +10,7 @@ export function useSearchRunner() {
   const { state, dispatch } = useSim();
   const generatorRef = useRef<Generator<SearchStep, void, void> | null>(null);
   const timerRef = useRef<number | null>(null);
-  const [speed, setSpeed] = useState<SearchSpeed>("normal");
+  const [speed, setSpeed] = useState<SearchSpeed>('normal');
 
   const stopTimer = useCallback(() => {
     if (timerRef.current !== null) {
@@ -27,7 +27,7 @@ export function useSearchRunner() {
       state.grid,
       state.robot.pos,
       state.goal,
-      state.algorithm === "astar",
+      state.algorithm === 'astar',
     );
     return generatorRef.current;
   }, [state.grid, state.robot, state.goal, state.algorithm]);
@@ -38,56 +38,62 @@ export function useSearchRunner() {
     const gen = ensureGenerator();
     if (!gen) {
       dispatch({
-        type: "SET_STATUS",
-        msg: "Place a Start and a Goal first, both are needed before planning a route.",
-        tone: "warn",
+        type: 'SET_STATUS',
+        msg: 'Place a Start and a Goal first, both are needed before planning a route.',
+        tone: 'warn',
       });
       return true;
     }
 
-    const { value, done } = gen.next();
-    if (done) return true;
+    const result = gen.next();
+    if (result.done === true) {
+      generatorRef.current = null;
+      return true;
+    }
+    const value = result.value;
 
-    if (value.kind === "visit") {
-      dispatch({ type: "MARK_EXPLORED", cells: [value.pos] });
+    if (value.kind === 'visit') {
+      dispatch({ type: 'MARK_EXPLORED', cells: [value.pos] });
       dispatch({
-        type: "SET_CALLOUT",
+        type: 'SET_CALLOUT',
         pos: value.pos,
         text:
-          state.algorithm === "astar"
-            ? "A* evaluating:  cost so far + distance to goal"
-            : "Dijkstra evaluating: cost so far only",
-        tone: "info",
+          state.algorithm === 'astar'
+            ? 'A* evaluating:  cost so far + distance to goal'
+            : 'Dijkstra evaluating: cost so far only',
+        tone: 'info',
       });
-    } else if (value.kind === "done") {
-      dispatch({ type: "MARK_PATH", cells: value.path });
-      dispatch({ type: "SET_PATH", path: value.path });
+    } else if (value.kind === 'done') {
+      dispatch({ type: 'MARK_PATH', cells: value.path });
+      dispatch({ type: 'SET_PATH', path: value.path });
       dispatch({
-        type: "SET_STATUS",
+        type: 'SET_STATUS',
         msg: `Route found - ${value.path.length} cells. Hit Walk in Robot to send it to Nav2 for execution.`,
-        tone: "success",
+        tone: 'success',
       });
       dispatch({
-        type: "SET_CALLOUT",
+        type: 'SET_CALLOUT',
         pos: value.path[value.path.length - 1],
         text: `Path found - ${value.path.length} cells`,
-        tone: "success",
+        tone: 'success',
       });
+      generatorRef.current = null;
       return true;
-    } else if (value.kind === "no-path") {
+    } else if (value.kind === 'no-path') {
       dispatch({
-        type: "SET_STATUS",
-        msg: "No route exists between Start and Goal!, try clearing a wall or moving one of them.",
-        tone: "warn",
+        type: 'SET_STATUS',
+        msg: 'No route exists between Start and Goal!, try clearing a wall or moving one of them.',
+        tone: 'warn',
       });
       if (state.robot) {
         dispatch({
-          type: "SET_CALLOUT",
+          type: 'SET_CALLOUT',
           pos: state.robot.pos,
-          text: "No path exists between start and goal",
-          tone: "warn",
+          text: 'No path exists between start and goal',
+          tone: 'warn',
         });
       }
+      generatorRef.current = null;
       return true;
     }
 
@@ -96,44 +102,44 @@ export function useSearchRunner() {
 
   const step = useCallback(() => {
     stopTimer();
-    dispatch({ type: "SET_RUNNING", val: false });
+    dispatch({ type: 'SET_RUNNING', val: false });
     advance();
   }, [advance, dispatch, stopTimer]);
 
   const play = useCallback(() => {
     if (!ensureGenerator()) {
       dispatch({
-        type: "SET_STATUS",
-        msg: "Place a Start and a Goal first, both are needed before planning a route.",
-        tone: "warn",
+        type: 'SET_STATUS',
+        msg: 'Place a Start and a Goal first, both are needed before planning a route.',
+        tone: 'warn',
       });
       return;
     }
     dispatch({
-      type: "SET_STATUS",
-      msg: `Searching for the shortest route with ${state.algorithm === "astar" ? "A*" : "Dijkstra"} the whole map is already known.`,
-      tone: "progress",
+      type: 'SET_STATUS',
+      msg: `Searching for the shortest route with ${state.algorithm === 'astar' ? 'A*' : 'Dijkstra'} the whole map is already known.`,
+      tone: 'progress',
     });
-    dispatch({ type: "SET_RUNNING", val: true });
+    dispatch({ type: 'SET_RUNNING', val: true });
     stopTimer();
     timerRef.current = window.setInterval(() => {
       if (advance()) {
         stopTimer();
-        dispatch({ type: "SET_RUNNING", val: false });
+        dispatch({ type: 'SET_RUNNING', val: false });
       }
     }, SPEED_MS[speed]);
   }, [advance, dispatch, ensureGenerator, speed, stopTimer, state.algorithm]);
 
   const pause = useCallback(() => {
     stopTimer();
-    dispatch({ type: "SET_RUNNING", val: false });
+    dispatch({ type: 'SET_RUNNING', val: false });
   }, [dispatch, stopTimer]);
 
   const reset = useCallback(() => {
     stopTimer();
     generatorRef.current = null;
-    dispatch({ type: "SET_RUNNING", val: false });
-    dispatch({ type: "RESET_SEARCH" });
+    dispatch({ type: 'SET_RUNNING', val: false });
+    dispatch({ type: 'RESET_SEARCH' });
   }, [dispatch, stopTimer]);
 
   return {

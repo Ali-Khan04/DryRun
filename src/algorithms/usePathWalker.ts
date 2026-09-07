@@ -1,5 +1,5 @@
-import { useCallback, useRef, useState } from "react";
-import { useSim } from "../context/SimulationContext";
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useSim } from '../context/SimulationContext';
 
 const SPEED_MS = { slow: 200, normal: 90, fast: 30 } as const;
 export type WalkSpeed = keyof typeof SPEED_MS;
@@ -19,7 +19,7 @@ export function usePathWalker() {
   const { state, dispatch } = useSim();
   const indexRef = useRef(0);
   const timerRef = useRef<number | null>(null);
-  const [speed, setSpeed] = useState<WalkSpeed>("normal");
+  const [speed, setSpeed] = useState<WalkSpeed>('normal');
   const [isWalking, setIsWalking] = useState(false);
 
   const stopTimer = useCallback(() => {
@@ -28,6 +28,15 @@ export function usePathWalker() {
       timerRef.current = null;
     }
   }, []);
+
+  // A new route must always start walking from path[0]. Without this, the
+  // index from the previous route can leave the robot starting halfway down
+  // a freshly planned SLAM path (or not moving at all).
+  useEffect(() => {
+    stopTimer();
+    indexRef.current = 0;
+    setIsWalking(false);
+  }, [state.path, stopTimer]);
 
   // Move the robot to path[indexRef.current], facing the direction it just came from
   const advance = useCallback((): boolean => {
@@ -41,7 +50,7 @@ export function usePathWalker() {
     const prev = i > 0 ? path[i - 1] : pos;
     const angleDeg = angleBetween(prev, pos);
 
-    dispatch({ type: "MOVE_ROBOT", pos, angleDeg });
+    dispatch({ type: 'MOVE_ROBOT', pos, angleDeg });
     indexRef.current += 1;
 
     return indexRef.current >= path.length;
@@ -56,22 +65,22 @@ export function usePathWalker() {
   const play = useCallback(() => {
     if (!state.path || state.path.length === 0) return;
     dispatch({
-      type: "SET_STATUS",
-      msg: "Nav2 is driving the robot along the planned route, this is what a real robot does after A*/Dijkstra hands it a path.",
-      tone: "progress",
+      type: 'SET_STATUS',
+      msg: 'Nav2 is driving the robot along the planned route, this is what a real robot does after A*/Dijkstra hands it a path.',
+      tone: 'progress',
     });
     setIsWalking(true);
-    dispatch({ type: "SET_RUNNING", val: true });
+    dispatch({ type: 'SET_RUNNING', val: true });
     stopTimer();
     timerRef.current = window.setInterval(() => {
       if (advance()) {
         stopTimer();
         setIsWalking(false);
-        dispatch({ type: "SET_RUNNING", val: false });
+        dispatch({ type: 'SET_RUNNING', val: false });
         dispatch({
-          type: "SET_STATUS",
-          msg: "Arrived! Nav2 followed the planned route all the way to the goal.",
-          tone: "success",
+          type: 'SET_STATUS',
+          msg: 'Arrived! Nav2 followed the planned route all the way to the goal.',
+          tone: 'success',
         });
       }
     }, SPEED_MS[speed]);
@@ -80,11 +89,11 @@ export function usePathWalker() {
   const pause = useCallback(() => {
     stopTimer();
     setIsWalking(false);
-    dispatch({ type: "SET_RUNNING", val: false });
+    dispatch({ type: 'SET_RUNNING', val: false });
     dispatch({
-      type: "SET_STATUS",
-      msg: "Walk paused. Resume, step through one move at a time, or reset to start the route over.",
-      tone: "guide",
+      type: 'SET_STATUS',
+      msg: 'Walk paused. Resume, step through one move at a time, or reset to start the route over.',
+      tone: 'guide',
     });
   }, [dispatch, stopTimer]);
 
@@ -92,11 +101,11 @@ export function usePathWalker() {
   const reset = useCallback(() => {
     stopTimer();
     setIsWalking(false);
-    dispatch({ type: "SET_RUNNING", val: false });
+    dispatch({ type: 'SET_RUNNING', val: false });
     indexRef.current = 0;
     const path = state.path;
     if (path && path.length > 0) {
-      dispatch({ type: "MOVE_ROBOT", pos: path[0], angleDeg: 0 });
+      dispatch({ type: 'MOVE_ROBOT', pos: path[0], angleDeg: 0 });
     }
   }, [dispatch, state.path, stopTimer]);
 
